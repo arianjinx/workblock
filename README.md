@@ -1,47 +1,61 @@
-# workblock
+# Workblock
 
-Blocks a list of sites 9:00-17:00, Mon-Fri, by rewriting `/etc/hosts`.
-Browser-agnostic: Chrome, Brave, Safari, and every app on the machine.
+A Brave/Chrome extension that blocks distracting sites during your working
+hours, and gets out of the way outside them.
 
-Edit `sites.txt` to change the list, and the three constants at the top of
-`workblock.sh` to change the hours or days.
+No sudo, no daemon, no account, no server. It reads your computer's clock and
+flips a `declarativeNetRequest` rule set on and off.
 
 ## Install
 
+Not on the Web Store. Load it from source:
+
+1. Clone this repo.
+2. Open `brave://extensions` (or `chrome://extensions`).
+3. Turn on **Developer mode**, top right.
+4. Click **Load unpacked** and pick the cloned folder.
+
+Click the toolbar icon to set your sites, hours, and days. Defaults are the
+usual suspects, 09:00-17:00, Monday to Friday.
+
+The badge reads `ON` while a block is active.
+
+## How it works
+
+`background.js` wakes once a minute on a `chrome.alarms` tick, asks
+`schedule.js` whether the current local time is inside your window, and either
+installs one dynamic block rule per site or clears them all. Rules match with
+`requestDomains`, so `x.com` also covers `www.x.com` and `mobile.x.com`, and
+only `main_frame` requests are blocked, so embedded content and APIs on those
+domains keep working.
+
+All the logic that can actually be wrong lives in `schedule.js`, which imports
+no browser APIs. That is what `test.mjs` exercises.
+
 ```sh
-sudo cp com.arianjinx.workblock.plist /Library/LaunchDaemons/
-sudo chown root:wheel /Library/LaunchDaemons/com.arianjinx.workblock.plist
-sudo launchctl load -w /Library/LaunchDaemons/com.arianjinx.workblock.plist
+npm test
 ```
 
-Runs every 60s as root, so a block starts and lifts within a minute of the hour.
+## Why not an /etc/hosts blocker
 
-## Uninstall
-
-```sh
-sudo launchctl unload -w /Library/LaunchDaemons/com.arianjinx.workblock.plist
-sudo rm /Library/LaunchDaemons/com.arianjinx.workblock.plist
-sudo cp /etc/hosts.workblock-backup /etc/hosts
-```
-
-The first run backs up `/etc/hosts` to `/etc/hosts.workblock-backup`.
-Outside the window the file is restored byte-for-byte, so the backup is a
-safety net, not the normal unblock path.
-
-## Test
-
-```sh
-./test.sh
-```
-
-Runs against a temp hosts file. No sudo, does not touch `/etc`.
-Overrides `WORKBLOCK_HOUR` / `WORKBLOCK_DAY` to test every window boundary.
+That was the first version of this repo, in the git history. It needed a root
+LaunchDaemon, and Chrome's Secure DNS setting defaults to `automatic`, which
+resolves over HTTPS and walks straight around `/etc/hosts`. The block was
+written correctly and the browser ignored it.
 
 ## Known ceilings
 
-- **Bypass cost is one `sudo` away.** This stops idle drift, not determined
-  craving. If you need a real wall, the block has to be something you cannot
-  unlock - see Cold Turkey's locked mode.
-- **Already-open tabs keep working.** Blocking only affects new DNS lookups.
-  Chrome also keeps its own DNS cache; a tab open since 08:55 may survive.
-- **Desktop only.** Your phone is the actual leak. Handle it separately.
+- **You can turn it off in two clicks**, from `brave://extensions`. This kills
+  idle drift, not real craving. To make it stick, force-install the extension
+  with a managed-policy profile (`ExtensionInstallForcelist`) and block
+  `brave://extensions` via `URLBlocklist` in the same profile.
+- **One window per day.** No lunch break, no split shifts, no overnight window
+  that wraps past midnight. `test.mjs` asserts the wrapping case is unsupported
+  rather than silently wrong.
+- **This browser only.** Safari, your phone, and any other browser are
+  untouched. Block at the DNS level if you want real coverage.
+- **Already-open tabs survive** until they navigate.
+
+## License
+
+MIT
