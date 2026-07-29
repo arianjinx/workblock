@@ -6,6 +6,5 @@
   "permissions": ["declarativeNetRequest", "storage", "alarms", "tabs", "browsingData"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "options.html", "default_title": "Workblock" },
-  "options_ui": { "page": "options.html", "open_in_tab": true },
-  "web_accessible_resources": [{ "resources": ["blocked.html"], "matches": ["<all_urls>"] }]
+  "options_ui": { "page": "options.html", "open_in_tab": true }
 }

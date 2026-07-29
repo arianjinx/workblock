@@ -32,10 +32,12 @@ async function sync() {
 	});
 
 	if (blocking) {
-		// Purge once on the way in - it is destructive to offline caches, and
-		// nothing can re-register a worker while navigations are being blocked.
-		if (old.length === 0) await dropServiceWorkers(cfg.sites);
+		// Order matters: a tab still sitting on the site re-registers the worker the
+		// moment we drop it, so the tab has to go first. Unconditional and every tick,
+		// because onInstalled and onStartup both turn out to be unreliable when an
+		// already-installed extension is reloaded. Only blocked origins are touched.
 		await sweepOpenTabs(cfg.sites);
+		await dropServiceWorkers(cfg.sites);
 	}
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
