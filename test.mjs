@@ -1,6 +1,6 @@
 // Self-check for the pure scheduling logic: node test.mjs
 import assert from "node:assert/strict";
-import { DEFAULTS, buildRules, isWorkHours, parseSites } from "./schedule.js";
+import { DEFAULTS, buildRules, hostMatches, isWorkHours, parseSites } from "./schedule.js";
 
 const at = (day, hour) => new Date(2026, 6, 26 + day, hour, 30); // Jul 26 2026 is a Sunday
 
@@ -32,5 +32,15 @@ assert.deepEqual(buildRules([]), [], "empty site list yields no rules");
 // pasted URLs get normalised down to a bare domain
 assert.deepEqual(parseSites("https://www.x.com/home\n\n# a comment\n  reddit.com  \n"), ["x.com", "reddit.com"]);
 assert.deepEqual(parseSites(""), [], "empty input is not a rule for everything");
+
+// tab-URL backstop for service-worker-served navigations
+const list = ["youtube.com", "x.com"];
+assert.equal(hostMatches("https://www.youtube.com/watch?v=abc", list), true, "subdomain matches");
+assert.equal(hostMatches("https://youtube.com/", list), true, "bare domain matches");
+assert.equal(hostMatches("https://notyoutube.com/", list), false, "suffix must land on a dot boundary");
+assert.equal(hostMatches("https://youtube.com.evil.test/", list), false, "domain must be the actual host");
+assert.equal(hostMatches("chrome-extension://abc/blocked.html", list), false, "never bounce our own page");
+assert.equal(hostMatches("about:blank", list), false, "non-http URLs are not matches");
+assert.equal(hostMatches("", list), false, "unparseable URL is not a match");
 
 console.log("ok - all checks passed");

@@ -29,6 +29,22 @@ installs one dynamic block rule per site or clears them all. Rules match with
 only `main_frame` requests are blocked, so embedded content and APIs on those
 domains keep working.
 
+Network rules alone are not enough. Sites that ship their own service worker,
+such as YouTube and a logged-in x.com, answer navigations straight from their
+cache, and that request never reaches the layer `declarativeNetRequest` sits
+on. So on the way into a block, Workblock also drops the service workers and
+cache storage for the blocked origins, which forces the next navigation back
+onto the network. Tabs already open when the window starts are bounced to
+`blocked.html`.
+
+That is what the three extra permissions buy:
+
+| Permission | Why |
+| --- | --- |
+| `declarativeNetRequest` | the actual blocking |
+| `tabs` | find tabs already sitting on a blocked site |
+| `browsingData` | drop service workers that would serve the site from cache |
+
 All the logic that can actually be wrong lives in `schedule.js`, which imports
 no browser APIs. That is what `test.mjs` exercises.
 
@@ -54,7 +70,8 @@ written correctly and the browser ignored it.
   rather than silently wrong.
 - **This browser only.** Safari, your phone, and any other browser are
   untouched. Block at the DNS level if you want real coverage.
-- **Already-open tabs survive** until they navigate.
+- **The service worker purge is destructive.** Entering a block clears offline
+  caches for the blocked origins only. YouTube offline downloads are collateral.
 
 ## License
 

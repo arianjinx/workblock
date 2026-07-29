@@ -1,4 +1,25 @@
-import { DEFAULTS, buildRules, isWorkHours } from "./schedule.js";
+import { DEFAULTS, buildRules, hostMatches, isWorkHours } from "./schedule.js";
+
+const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
+
+// A site's own service worker answers navigations from its cache, so the request
+// never reaches the network layer that declarativeNetRequest sits on. YouTube and
+// a logged-in x.com both do this. Dropping their service worker forces the next
+// navigation back onto the network, where the rules apply.
+async function dropServiceWorkers(sites) {
+	const origins = sites.flatMap((s) => [`https://${s}`, `https://www.${s}`]);
+	await chrome.browsingData.remove({ origins }, { serviceWorkers: true, cacheStorage: true });
+}
+
+// Tabs already open when the window starts are still rendering the site, and
+// clicking around in an SPA never issues a fresh navigation.
+async function sweepOpenTabs(sites) {
+	for (const tab of await chrome.tabs.query({})) {
+		if (tab.url && hostMatches(tab.url, sites)) {
+			chrome.tabs.update(tab.id, { url: BLOCKED_PAGE });
+		}
+	}
+}
 
 async function sync() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
@@ -9,6 +30,13 @@ async function sync() {
 		removeRuleIds: old.map((r) => r.id),
 		addRules: blocking ? buildRules(cfg.sites) : [],
 	});
+
+	if (blocking) {
+		// Purge once on the way in - it is destructive to offline caches, and
+		// nothing can re-register a worker while navigations are being blocked.
+		if (old.length === 0) await dropServiceWorkers(cfg.sites);
+		await sweepOpenTabs(cfg.sites);
+	}
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
 	chrome.action.setBadgeBackgroundColor({ color: "#c0392b" });
