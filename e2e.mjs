@@ -42,8 +42,10 @@ function connect(wsUrl) {
 	const ws = new WebSocket(wsUrl);
 	let seq = 0;
 	const pending = new Map();
+	const errors = [];
 	ws.onmessage = (e) => {
 		const msg = JSON.parse(e.data);
+		if (msg.method === "Runtime.exceptionThrown") errors.push(msg.params.exceptionDetails.exception?.description);
 		pending.get(msg.id)?.(msg);
 		pending.delete(msg.id);
 	};
@@ -58,7 +60,7 @@ function connect(wsUrl) {
 		if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
 		return r.result.value;
 	};
-	return new Promise((resolve) => (ws.onopen = () => resolve({ send, evaluate, close: () => ws.close() })));
+	return new Promise((resolve) => (ws.onopen = () => resolve({ send, evaluate, errors, close: () => ws.close() })));
 }
 
 try {
@@ -66,6 +68,7 @@ try {
 		(await targets()).find((t) => t.type === "service_worker" && t.url.endsWith("/background.js")),
 	);
 	const ext = await connect(sw.webSocketDebuggerUrl);
+	await ext.send("Runtime.enable");
 	const extBase = sw.url.replace(/background\.js$/, "");
 	const setCfg = (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`);
 	const openTab = (url, active = true) => ext.evaluate(`chrome.tabs.create(${JSON.stringify({ url, active })}).then(t => t.id)`);
@@ -125,6 +128,18 @@ try {
 	const fresh = await openTab(freshUrl);
 	await landsOn(fresh, blockedPageUrl(extBase + "blocked.html", freshUrl), "new visit to land on the blocked page", 5000);
 	console.log("ok - a new visit during a block lands on the blocked page, not the browser error");
+
+	const ruleCount = () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`);
+	await setCfg({ days: [] });
+	await waitFor("rules cleared", async () => (await ruleCount()) === 0);
+	await ext.evaluate(`Promise.all([
+		chrome.storage.sync.set({ days: ${JSON.stringify(ALWAYS.days)} }),
+		chrome.storage.sync.set({ sites: ["example.com", "example.org"] }),
+	]).then(() => true)`);
+	await sleep(2000);
+	assert.equal(await ruleCount(), 2, "rules match the last settings after overlapping syncs");
+	assert.deepEqual(ext.errors, [], "background script threw nothing");
+	console.log("ok - overlapping syncs leave one consistent rule set and no errors");
 
 	console.log("ok - e2e passed");
 } finally {
