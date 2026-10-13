@@ -53,3 +53,13 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(sync);
 chrome.alarms.onAlarm.addListener(sync);
 chrome.storage.onChanged.addListener(sync);
+
+// A new visit during a block lands on the browser's own ERR_BLOCKED_BY_CLIENT
+// page, which would otherwise sit there until the next tick.
+chrome.tabs.onUpdated.addListener(async (tabId, { url }) => {
+	if (!url) return;
+	const cfg = await chrome.storage.sync.get(DEFAULTS);
+	if (isWorkHours(cfg, new Date()) && hostMatches(url, cfg.sites)) {
+		chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
+	}
+});

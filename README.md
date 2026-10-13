@@ -35,7 +35,8 @@ cache, and that request never reaches the layer `declarativeNetRequest` sits
 on. So on the way into a block, Workblock also drops the service workers and
 cache storage for the blocked origins, which forces the next navigation back
 onto the network. Tabs already open when the window starts are bounced to
-`blocked.html`.
+`blocked.html`, and so is any tab that navigates to a blocked site during the
+window, instead of sitting on the browser's `ERR_BLOCKED_BY_CLIENT` page.
 
 A bounced tab never loses its link. Its URL becomes
 `blocked.html?url=<the original>`, so the link survives in tab groups, saved
