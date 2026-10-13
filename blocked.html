@@ -2,28 +2,120 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Blocked - Workblock</title>
 		<style>
-			:root { color-scheme: light dark; }
-			body {
-				font: 16px/1.6 system-ui, sans-serif;
-				height: 100vh;
-				margin: 0;
-				display: grid;
-				place-content: center;
-				text-align: center;
-				gap: 6px;
+			:root {
+				color-scheme: light dark;
+				--field: #dce0e5;
+				--paper: #f6dad4;
+				--ink: #a3241b;
+				--ink-soft: color-mix(in srgb, var(--ink) 72%, var(--paper));
+				--text: #3d434b;
+				--font: "Avenir Next Condensed", "Avenir Next", "Roboto Condensed", "Arial Narrow", sans-serif;
 			}
-			h1 { font-size: 28px; margin: 0; }
-			p { margin: 0; opacity: 0.6; }
-			a { max-width: 60ch; margin-top: 12px; overflow-wrap: anywhere; font-size: 14px; color: inherit; }
+			@media (prefers-color-scheme: dark) {
+				:root {
+					--field: #24272c;
+					--paper: #3b2427;
+					--ink: #ffb0a6;
+					--text: #aab1ba;
+				}
+			}
+
+			body {
+				margin: 0;
+				min-height: 100vh;
+				padding: 24px 16px;
+				box-sizing: border-box;
+				display: grid;
+				place-items: center;
+				background: var(--field);
+				color: var(--text);
+				font: 500 16px/1.5 var(--font);
+			}
+
+			main { display: grid; gap: 20px; width: min(640px, 100%); }
+			.ticket {
+				--notch: 8px;
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto;
+				background: var(--paper);
+				color: var(--ink);
+				border-radius: 6px;
+			}
+			.claim { padding: 28px 32px 30px; min-width: 0; }
+			.stub {
+				position: relative;
+				padding: 28px 32px 30px 28px;
+				border-left: 2px dashed color-mix(in srgb, var(--ink) 40%, transparent);
+				font-variant-numeric: tabular-nums;
+			}
+			/* The two half-circle bites where a ticket tears. */
+			.stub::before,
+			.stub::after {
+				content: "";
+				position: absolute;
+				left: calc(-1 * var(--notch) - 1px);
+				width: calc(2 * var(--notch));
+				height: calc(2 * var(--notch));
+				border-radius: 50%;
+				background: var(--field);
+			}
+			.stub::before { top: calc(-1 * var(--notch)); }
+			.stub::after { bottom: calc(-1 * var(--notch)); }
+
+			h1 {
+				margin: 0;
+				font-size: clamp(48px, 9vw, 72px);
+				font-weight: 700;
+				line-height: 1;
+				letter-spacing: -0.01em;
+				overflow-wrap: anywhere;
+			}
+			#url {
+				display: block;
+				margin-top: 14px;
+				color: var(--ink-soft);
+				text-decoration-thickness: 1px;
+				text-underline-offset: 3px;
+				overflow-wrap: anywhere;
+			}
+			#url:hover { color: var(--ink); }
+			#url:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
+			.stub p { margin: 0; }
+			#time { font-size: 48px; font-weight: 700; line-height: 1.05; }
+			#left { color: var(--ink-soft); }
+
+			.note { margin: 0 4px; max-width: 52ch; }
+
+			@media (max-width: 520px) {
+				.ticket { grid-template-columns: 1fr; }
+				.claim { padding: 24px 24px 26px; }
+				.stub { padding: 22px 24px 24px; border-left: 0; border-top: 2px dashed color-mix(in srgb, var(--ink) 40%, transparent); }
+				.stub::before,
+				.stub::after { top: calc(-1 * var(--notch) - 1px); bottom: auto; }
+				.stub::before { left: calc(-1 * var(--notch)); }
+				.stub::after { left: auto; right: calc(-1 * var(--notch)); }
+			}
 		</style>
 		<script type="module" src="blocked.js"></script>
 	</head>
 	<body>
-		<h1>Not now.</h1>
-		<p>Workblock has this site closed during working hours. This tab goes back when it opens.</p>
-		<a id="url"></a>
-		<p id="legacy" hidden>Blocked by an older Workblock. The page is one step back in this tab's history.</p>
+		<main>
+			<div class="ticket">
+				<div class="claim">
+					<h1 id="host">This tab</h1>
+					<a id="url"></a>
+					<p id="legacy" hidden>The page it was on is one step back in its history.</p>
+				</div>
+				<div class="stub">
+					<p>Back at</p>
+					<p id="time">--:--</p>
+					<p id="left"></p>
+				</div>
+			</div>
+			<p class="note">Workblock is holding this tab through working hours. When the site opens, the tab goes back to this page by itself.</p>
+		</main>
 	</body>
 </html>
