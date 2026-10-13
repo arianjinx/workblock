@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { blockedPageUrl } from "./schedule.js";
 
 const BROWSER = process.argv[2] ?? "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
 const PORT = 9333;
@@ -69,7 +70,7 @@ try {
 	const setCfg = (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`);
 	const openTab = (url, active = true) => ext.evaluate(`chrome.tabs.create(${JSON.stringify({ url, active })}).then(t => t.id)`);
 	const tabUrl = (id) => ext.evaluate(`chrome.tabs.get(${id}).then(t => t.url)`);
-	const landsOn = (id, url, what) => waitFor(what, async () => (await tabUrl(id)) === url);
+	const landsOn = (id, url, what, timeout) => waitFor(what, async () => (await tabUrl(id)) === url, timeout);
 
 	await setCfg({ sites: [], ...ALWAYS });
 	const tab = await openTab(ORIGINAL);
@@ -117,6 +118,13 @@ try {
 	await setCfg({ days: [] });
 	await landsOn(legacy, legacyUrl, "bare blocked tab to step back once off the clock");
 	console.log("ok - tab swept by the old version steps back once off the clock");
+
+	const freshUrl = "https://example.com/fresh";
+	await setCfg({ sites: ["example.com"], ...ALWAYS });
+	await waitFor("block rules", () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length > 0)`));
+	const fresh = await openTab(freshUrl);
+	await landsOn(fresh, blockedPageUrl(extBase + "blocked.html", freshUrl), "new visit to land on the blocked page", 5000);
+	console.log("ok - a new visit during a block lands on the blocked page, not the browser error");
 
 	console.log("ok - e2e passed");
 } finally {
