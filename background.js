@@ -7,6 +7,7 @@ const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 // a logged-in x.com both do this. Dropping their service worker forces the next
 // navigation back onto the network, where the rules apply.
 async function dropServiceWorkers(sites) {
+	if (!sites.length) return;
 	const origins = sites.flatMap((s) => [`https://${s}`, `https://www.${s}`]);
 	await chrome.browsingData.remove({ origins }, { serviceWorkers: true, cacheStorage: true });
 }
@@ -21,7 +22,7 @@ async function sweepOpenTabs(sites) {
 	}
 }
 
-async function sync() {
+async function applySchedule() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const blocking = isWorkHours(cfg, new Date());
 	const old = await chrome.declarativeNetRequest.getDynamicRules();
@@ -42,6 +43,14 @@ async function sync() {
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
 	chrome.action.setBadgeBackgroundColor({ color: "#c0392b" });
+}
+
+// Each run reads the rule set and then rewrites it. Two runs at once both read the
+// same old rules and the second one's add collides on rule 1, so queue them.
+let latest = Promise.resolve();
+function sync() {
+	latest = latest.then(applySchedule, applySchedule);
+	return latest;
 }
 
 // 1 min is the shortest period MV3 allows, and it is what wakes the service
