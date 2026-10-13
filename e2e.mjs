@@ -66,14 +66,18 @@ try {
 	);
 	const ext = await connect(sw.webSocketDebuggerUrl);
 	const extBase = sw.url.replace(/background\.js$/, "");
-	await ext.evaluate(`chrome.storage.sync.set(${JSON.stringify({ sites: [], ...ALWAYS })})`);
-	const tabId = await ext.evaluate(`chrome.tabs.create({ url: ${JSON.stringify(ORIGINAL)} }).then(t => t.id)`);
-	const tabUrl = () => ext.evaluate(`chrome.tabs.get(${tabId}).then(t => t.url)`);
-	await waitFor("example.com to load", async () => (await tabUrl()) === ORIGINAL);
+	const setCfg = (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`);
+	const openTab = (url, active = true) => ext.evaluate(`chrome.tabs.create(${JSON.stringify({ url, active })}).then(t => t.id)`);
+	const tabUrl = (id) => ext.evaluate(`chrome.tabs.get(${id}).then(t => t.url)`);
+	const landsOn = (id, url, what) => waitFor(what, async () => (await tabUrl(id)) === url);
 
-	await ext.evaluate(`chrome.storage.sync.set({ sites: ["example.com"] })`);
+	await setCfg({ sites: [], ...ALWAYS });
+	const tab = await openTab(ORIGINAL);
+	await landsOn(tab, ORIGINAL, "example.com to load");
+
+	await setCfg({ sites: ["example.com"] });
 	const swept = await waitFor("tab to be swept", async () => {
-		const u = await tabUrl();
+		const u = await tabUrl(tab);
 		return u?.startsWith(extBase) && u;
 	});
 	console.log("swept tab url:", swept);
@@ -86,12 +90,33 @@ try {
 	await waitFor("link to render", async () => (await page.evaluate(`document.querySelector("a")?.href`)) === ORIGINAL);
 	page.close();
 
-	await ext.evaluate(`chrome.storage.sync.set({ sites: [] })`);
-	const back = await waitFor("tab to return once unblocked", async () => {
-		const u = await tabUrl();
-		return u === ORIGINAL && u;
-	});
-	console.log("restored tab url:", back);
+	await setCfg({ sites: [] });
+	await landsOn(tab, ORIGINAL, "tab to return once unblocked");
+	console.log("ok - swept tab returns once unblocked");
+
+	const reopened = await openTab(swept);
+	await landsOn(reopened, ORIGINAL, "reopened blocked tab to return");
+	console.log("ok - blocked tab reopened from a saved group returns");
+
+	const hiddenUrl = "https://example.com/hidden";
+	const hidden = await openTab(hiddenUrl, false);
+	await landsOn(hidden, hiddenUrl, "background tab to load");
+	await setCfg({ sites: ["example.com"] });
+	await waitFor("background tab to be swept", async () => (await tabUrl(hidden))?.startsWith(extBase));
+	await setCfg({ sites: [] });
+	await sleep(3000);
+	assert.ok((await tabUrl(hidden)).startsWith(extBase), "background tab waits until it is viewed");
+	await ext.evaluate(`chrome.tabs.update(${hidden}, { active: true }).then(() => true)`);
+	await landsOn(hidden, hiddenUrl, "background tab to return when viewed");
+	console.log("ok - background tab returns when viewed, not before");
+
+	const legacyUrl = "https://example.com/legacy";
+	const legacy = await openTab(legacyUrl);
+	await landsOn(legacy, legacyUrl, "legacy tab to load");
+	await ext.evaluate(`chrome.tabs.update(${legacy}, { url: ${JSON.stringify(extBase + "blocked.html")} }).then(() => true)`);
+	await setCfg({ days: [] });
+	await landsOn(legacy, legacyUrl, "bare blocked tab to step back once off the clock");
+	console.log("ok - tab swept by the old version steps back once off the clock");
 
 	console.log("ok - e2e passed");
 } finally {

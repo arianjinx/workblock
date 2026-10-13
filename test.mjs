@@ -1,6 +1,6 @@
 // Self-check for the pure scheduling logic: node test.mjs
 import assert from "node:assert/strict";
-import { DEFAULTS, buildRules, hostMatches, isWorkHours, parseSites } from "./schedule.js";
+import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isWorkHours, parseSites, returnUrl } from "./schedule.js";
 
 const at = (day, hour) => new Date(2026, 6, 26 + day, hour, 30); // Jul 26 2026 is a Sunday
 
@@ -42,5 +42,13 @@ assert.equal(hostMatches("https://youtube.com.evil.test/", list), false, "domain
 assert.equal(hostMatches("chrome-extension://abc/blocked.html", list), false, "never bounce our own page");
 assert.equal(hostMatches("about:blank", list), false, "non-http URLs are not matches");
 assert.equal(hostMatches("", list), false, "unparseable URL is not a match");
+
+// the blocked page round-trips the URL it replaced, query and fragment included
+const original = "https://www.youtube.com/watch?v=abc&t=42s#comments";
+const page = blockedPageUrl("chrome-extension://id/blocked.html", original);
+assert.equal(returnUrl(new URL(page).search), original, "original URL survives the round trip");
+assert.equal(returnUrl(""), null, "a bare blocked page has nowhere to return to");
+assert.equal(returnUrl("?url=javascript%3Aalert(1)"), null, "never return to a javascript: URL");
+assert.equal(returnUrl("?url=chrome-extension%3A%2F%2Fid%2Fblocked.html"), null, "never return to an extension page");
 
 console.log("ok - all checks passed");

@@ -37,6 +37,13 @@ cache storage for the blocked origins, which forces the next navigation back
 onto the network. Tabs already open when the window starts are bounced to
 `blocked.html`.
 
+A bounced tab never loses its link. Its URL becomes
+`blocked.html?url=<the original>`, so the link survives in tab groups, saved
+groups, and session restore, all of which keep only a tab's current URL. The
+blocked page shows the link, and once that site is no longer blocked it sends
+the tab back. Only the tab you are looking at goes back, so a dozen hidden tabs
+don't all reload at 17:00. Each one returns when you switch to it.
+
 That is what the three extra permissions buy:
 
 | Permission | Why |
@@ -46,10 +53,13 @@ That is what the three extra permissions buy:
 | `browsingData` | drop service workers that would serve the site from cache |
 
 All the logic that can actually be wrong lives in `schedule.js`, which imports
-no browser APIs. That is what `test.mjs` exercises.
+no browser APIs. That is what `test.mjs` exercises. `e2e.mjs` loads the
+extension into a throwaway Brave profile and drives a real block and unblock.
 
 ```sh
 npm test
+npm run e2e                       # needs Brave
+npm run e2e -- "/path/to/Chromium"  # or any other Chromium build
 ```
 
 ## Why not an /etc/hosts blocker

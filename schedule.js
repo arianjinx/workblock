@@ -54,3 +54,15 @@ export function parseSites(text) {
 		.map((line) => line.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""))
 		.filter((line) => line && !line.startsWith("#"));
 }
+
+// The blocked page carries the URL it replaced. Brave's saved tab groups keep
+// only a tab's current URL, so without this the original link is gone for good.
+export function blockedPageUrl(page, url) {
+	return `${page}?url=${encodeURIComponent(url)}`;
+}
+
+// Only ever send a tab back to a web page, never a javascript: or extension URL.
+export function returnUrl(search) {
+	const url = new URLSearchParams(search).get("url");
+	return /^https?:\/\//.test(url ?? "") ? url : null;
+}

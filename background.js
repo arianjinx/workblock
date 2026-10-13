@@ -1,4 +1,4 @@
-import { DEFAULTS, buildRules, hostMatches, isWorkHours } from "./schedule.js";
+import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isWorkHours } from "./schedule.js";
 
 const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 
@@ -16,7 +16,7 @@ async function dropServiceWorkers(sites) {
 async function sweepOpenTabs(sites) {
 	for (const tab of await chrome.tabs.query({})) {
 		if (tab.url && hostMatches(tab.url, sites)) {
-			chrome.tabs.update(tab.id, { url: BLOCKED_PAGE });
+			chrome.tabs.update(tab.id, { url: blockedPageUrl(BLOCKED_PAGE, tab.url) });
 		}
 	}
 }

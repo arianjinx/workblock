@@ -16,10 +16,14 @@
 			}
 			h1 { font-size: 28px; margin: 0; }
 			p { margin: 0; opacity: 0.6; }
+			a { max-width: 60ch; margin-top: 12px; overflow-wrap: anywhere; font-size: 14px; color: inherit; }
 		</style>
+		<script type="module" src="blocked.js"></script>
 	</head>
 	<body>
 		<h1>Not now.</h1>
-		<p>Workblock has this site closed during working hours.</p>
+		<p>Workblock has this site closed during working hours. This tab goes back when it opens.</p>
+		<a id="url"></a>
+		<p id="legacy" hidden>Blocked by an older Workblock. The page is one step back in this tab's history.</p>
 	</body>
 </html>
