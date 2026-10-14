@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Run unit tests
+        run: npm test
+
+  e2e:
+    name: E2E in Chrome stable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # Branded Google Chrome 137+ ignores --load-extension; Chrome for Testing still honors it.
+      - name: Install Chrome for Testing (stable)
+        run: |
+          path=$(npx -y @puppeteer/browsers@3.2.4 install chrome@stable --path "$RUNNER_TEMP/browsers" --format '{{path}}' | tail -n1)
+          "$path" --version
+          echo "CHROME=$path" >> "$GITHUB_ENV"
+      # Ubuntu's AppArmor blocks the unprivileged user namespaces Chrome's sandbox needs,
+      # and Chrome aborts with "No usable sandbox!" unless this is lifted.
+      - name: Allow Chrome's sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Run e2e
+        run: xvfb-run -a npm run e2e -- "$CHROME"

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Workblock</title>
+		<style>
+			:root { color-scheme: light dark; }
+			body {
+				font: 13px/1.5 system-ui, sans-serif;
+				margin: 0;
+				padding: 16px;
+				min-width: 300px;
+				max-width: 420px;
+			}
+			h1 { font-size: 15px; margin: 0 0 2px; }
+			#status { color: #888; margin: 0 0 14px; }
+			#status[data-blocking="true"] { color: #c0392b; font-weight: 600; }
+			label { display: block; font-weight: 600; margin: 12px 0 4px; }
+			textarea, input[type="number"] {
+				font: inherit;
+				font-family: ui-monospace, monospace;
+				padding: 5px 6px;
+				border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+				border-radius: 5px;
+				background: transparent;
+				color: inherit;
+			}
+			textarea { width: 100%; box-sizing: border-box; height: 150px; resize: vertical; }
+			input[type="number"] { width: 56px; }
+			#days { display: flex; gap: 3px; }
+			#days label {
+				font-weight: 400;
+				margin: 0;
+				display: grid;
+				justify-items: center;
+				gap: 2px;
+				padding: 4px 6px;
+				border-radius: 5px;
+				cursor: pointer;
+				user-select: none;
+			}
+			#days label:hover { background: color-mix(in srgb, currentColor 10%, transparent); }
+			button {
+				font: inherit;
+				margin-top: 16px;
+				padding: 7px 16px;
+				border: 0;
+				border-radius: 5px;
+				background: #c0392b;
+				color: #fff;
+				cursor: pointer;
+			}
+			#saved { margin-left: 10px; color: #2e7d32; opacity: 0; transition: opacity 0.2s; }
+			#saved.show { opacity: 1; }
+		</style>
+	</head>
+	<body>
+		<h1>Workblock</h1>
+		<p id="status">…</p>
+
+		<label for="sites">Blocked sites</label>
+		<textarea id="sites" spellcheck="false" placeholder="x.com&#10;reddit.com"></textarea>
+
+		<label>Hours</label>
+		<input type="number" id="startHour" min="0" max="23" /> to
+		<input type="number" id="endHour" min="0" max="23" />
+
+		<label>Days</label>
+		<div id="days"></div>
+
+		<button id="save">Save</button><span id="saved">saved</span>
+
+		<script type="module" src="options.js"></script>
+	</body>
+</html>
