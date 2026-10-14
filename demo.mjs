@@ -7,7 +7,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { connect, launch, targets, waitFor } from "./cdp.mjs";
+import { connect, connectWorker, launch, targets, waitFor } from "./cdp.mjs";
 import { DEFAULTS } from "./schedule.js";
 
 const DOCS = join(import.meta.dirname, "docs");
@@ -157,13 +157,9 @@ function stageHtml(t, shot, step, caption) {
 }
 
 async function record(theme, frames) {
-	const close = launch(process.argv[2]);
+	const close = await launch(process.argv[2]);
 	try {
-		const sw = await waitFor("extension service worker", async () =>
-			(await targets()).find((t) => t.type === "service_worker" && t.url.endsWith("/background.js")),
-		);
-		const ext = await connect(sw.webSocketDebuggerUrl);
-		await ext.send("Runtime.enable");
+		const { ext, extBase } = await connectWorker();
 		const tabUrl = (id) => ext.evaluate(`chrome.tabs.get(${id}).then(t => t.url)`);
 
 		// Emulation set before the first navigation, so each page lays out once with
@@ -191,7 +187,7 @@ async function record(theme, frames) {
 		}
 
 		const s = {
-			extBase: sw.url.replace(/background\.js$/, ""),
+			extBase,
 			setCfg: (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`),
 			ruleCount: () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`),
 			open,
