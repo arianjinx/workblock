@@ -6,7 +6,9 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"test": "node test.mjs",
-		"e2e": "node e2e.mjs"
+		"test": "node test.mjs && node prune.test.mjs",
+		"e2e": "node e2e.mjs",
+		"prune": "node prune.mjs",
+		"ship": "node ship.mjs"
 	}
 }

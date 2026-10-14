@@ -132,6 +132,7 @@ on the Workblock card in `brave://extensions`.
 | `options.html`, `options.js` | The settings page, used as both the toolbar popup and the options page. |
 | `test.mjs` | Unit checks for `schedule.js`. |
 | `e2e.mjs` | End-to-end checks in a real browser. |
+| `ship.mjs`, `prune.mjs` | The `npm run ship` and `npm run prune` commands. `prune.test.mjs` checks which worktrees and branches `prune` removes. |
 
 Run the checks:
 
@@ -145,6 +146,20 @@ npm run e2e -- "/path/to/Chromium"    # any other Chromium build
 throwaway profile and remote debugging on port 9333, then blocks and unblocks
 `example.com`. It checks that blocked tabs keep their link, that a background
 tab waits until you view it, and that new visits land on the blocked page.
+
+To merge a branch into `main`, commit your work and run `npm run ship` from the
+branch. It merges `origin/main` into the branch, runs `npm test`, pushes, opens
+a PR or reuses the open one, and merges it with a merge commit. Then it
+fast-forwards your local `main` and runs `npm run prune`. To give the PR a
+hand-written title and description, open it yourself first, and `ship` merges
+that PR. Both commands call the GitHub API through `gh`, signed in as the repo
+owner.
+
+`npm run prune` removes every worktree, local branch, and remote branch whose
+tip is the head of a merged PR. It keeps the current worktree, the main
+checkout's branch, detached worktrees, worktrees that a running process uses as
+its working directory, and any branch with commits after its merge. You can run
+it again at any time.
 
 ## License
 
