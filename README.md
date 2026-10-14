@@ -1,10 +1,29 @@
 # Workblock
 
+[![CI](https://github.com/arianjinx/workblock/actions/workflows/ci.yml/badge.svg)](https://github.com/arianjinx/workblock/actions/workflows/ci.yml)
+[![Manifest V3](https://img.shields.io/badge/manifest-v3-4285F4)](manifest.json)
+[![No dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 A Brave and Chrome extension that blocks distracting sites during your working
 hours and stays out of the way outside them.
 
 There is no sudo, no daemon, no account, and no server. Workblock reads your
 computer's clock and turns a `declarativeNetRequest` rule set on and off.
+
+<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="docs/demo-dark.gif" />
+	<img src="docs/demo-light.gif" width="100%" alt="Workblock in a real browser. The settings popup reads Blocking now. A tab on the Hacker News guidelines moves to a blocked page that names the site and the time the block ends. A new visit to youtube.com lands on the same page. When the block ends, the first tab goes back to the Hacker News guidelines by itself." />
+</picture>
+
+The demo above is a real browser running this folder as an unpacked extension.
+`npm run demo` records it again from a script, so it always matches the code.
+
+1. You set the sites, hours, and days in the toolbar popup.
+2. When the block starts, an open tab on a blocked site moves to the blocked
+   page. The page names the site and the time the block ends.
+3. A new visit to a blocked site lands on the same page.
+4. When the block ends, the tab goes back to the page it was on.
 
 ## Install from source
 
@@ -113,8 +132,7 @@ new visit lands on the browser's own `ERR_BLOCKED_BY_CLIENT` error page.
 
 ## Why not an /etc/hosts blocker
 
-The first version of this repo, still in the git history, edited `/etc/hosts`
-from a root LaunchDaemon. It did not work in the browser. Chrome's Secure DNS
+The first version of Workblock edited `/etc/hosts` from a root LaunchDaemon. It did not work in the browser. Chrome's Secure DNS
 setting defaults to `automatic`, which resolves names over HTTPS and skips
 `/etc/hosts`. The block was written correctly, and the browser ignored it.
 
@@ -132,6 +150,9 @@ on the Workblock card in `brave://extensions`.
 | `options.html`, `options.js` | The settings page, used as both the toolbar popup and the options page. |
 | `test.mjs` | Unit checks for `schedule.js`. |
 | `e2e.mjs` | End-to-end checks in a real browser. |
+| `demo.mjs` | Records `docs/demo-light.gif` and `docs/demo-dark.gif` in a real browser. |
+| `cdp.mjs` | Starts a browser with the extension loaded and talks to it over the Chrome DevTools Protocol. `e2e.mjs` and `demo.mjs` both use it. |
+| `.github/workflows/ci.yml` | The CI workflow. |
 | `ship.mjs`, `prune.mjs` | The `npm run ship` and `npm run prune` commands. `prune.test.mjs` checks which worktrees and branches `prune` removes. |
 
 Run the checks:
@@ -140,12 +161,23 @@ Run the checks:
 npm test                              # unit checks, plain Node
 npm run e2e                           # Brave at its default macOS path
 npm run e2e -- "/path/to/Chromium"    # any other Chromium build
+npm run demo                          # record the README demo again
 ```
 
 `npm run e2e` needs Node 22 or later. It opens a browser window with a
 throwaway profile and remote debugging on port 9333, then blocks and unblocks
 `example.com`. It checks that blocked tabs keep their link, that a background
 tab waits until you view it, and that new visits land on the blocked page.
+
+After you change `options.html` or the blocked page, run `npm run demo` and
+commit the new GIFs. The script needs `ffmpeg` and network access, because the
+demo loads the Hacker News guidelines page.
+
+CI runs `npm test` and `npm run e2e` on every push to `main` and every pull
+request. The e2e job uses the current stable Chrome for Testing, because
+branded Chrome 137 and later ignores `--load-extension`. CI also runs every
+week with no code change, so the badge turns red when a new Chrome release
+breaks the extension.
 
 To merge a branch into `main`, commit your work and run `npm run ship` from the
 branch. It merges `origin/main` into the branch, runs `npm test`, pushes, opens

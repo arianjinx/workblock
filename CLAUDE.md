@@ -10,6 +10,7 @@ Workblock is a Manifest V3 Brave/Chrome extension that blocks distracting sites 
 npm test                              # test.mjs and prune.test.mjs — unit asserts against schedule.js and the prune plan
 npm run e2e                           # node e2e.mjs — drives a real Brave (macOS default path)
 npm run e2e -- "/path/to/Chromium"    # any other Chromium build
+npm run demo                          # node demo.mjs — re-record docs/demo-{light,dark}.gif for the README (needs ffmpeg)
 npm run ship                          # from a branch: merge origin/main in, npm test, push, open or reuse a PR, merge it, fast-forward main, prune
 npm run prune                         # remove worktrees and branches whose tip is a merged PR's head, locally and on GitHub
 ```
@@ -33,6 +34,8 @@ To try changes by hand, load the folder unpacked from `brave://extensions` (Deve
 
 - The window is one range per day. `startHour` is inclusive and `endHour` is exclusive, both in local time, and `days` uses `Date#getDay` (0=Sun). Wrap-past-midnight windows are deliberately unsupported, and `test.mjs` asserts that.
 - Adding a `chrome.*` permission means updating the permissions table in `README.md`, which justifies each one.
+- After any visible change to `options.html` or the blocked page, run `npm run demo` and commit the regenerated GIFs so the README demo matches the code.
+- CI (`.github/workflows/ci.yml`) runs `npm test` and `npm run e2e` against Chrome for Testing on push to `main`, on PRs, and weekly. Branded Chrome 137+ ignores `--load-extension`, so don't point e2e at it.
 - `e2e.mjs` talks raw CDP over WebSocket on port 9333 with a throwaway profile, and blocks `example.com` with an always-on window. New e2e scenarios reuse its `setCfg`/`openTab`/`landsOn`/`waitFor` helpers. The final assertion checks that the background service worker threw no exceptions during the run.
 - Git history follows a test-first pattern: a `test: e2e check that …` commit lands before the matching `fix: …`. Commit prefixes are `feat:`, `fix:`, and `test:`. JS uses tab indentation and `manifest.json` uses two spaces.
 
