@@ -35,3 +35,7 @@ To try changes by hand, load the folder unpacked from `brave://extensions` (Deve
 - Adding a `chrome.*` permission means updating the permissions table in `README.md`, which justifies each one.
 - `e2e.mjs` talks raw CDP over WebSocket on port 9333 with a throwaway profile, and blocks `example.com` with an always-on window. New e2e scenarios reuse its `setCfg`/`openTab`/`landsOn`/`waitFor` helpers. The final assertion checks that the background service worker threw no exceptions during the run.
 - Git history follows a test-first pattern: a `test: e2e check that …` commit lands before the matching `fix: …`. Commit prefixes are `feat:`, `fix:`, and `test:`. JS uses tab indentation and `manifest.json` uses two spaces.
+
+## Git workflow
+
+Arian is the only developer, so agents merge their own PRs. Work in a worktree on a branch. When the work is committed and `npm test` passes, run `npm run ship` from the branch and do not hand the merge back to Arian. Run `npm run e2e` first for any change to the extension's behavior, because `ship` runs only `npm test`. `ship` ends with `npm run prune`, so start each new task on a fresh worktree branch.
