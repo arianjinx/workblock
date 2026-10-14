@@ -7,9 +7,11 @@ Workblock is a Manifest V3 Brave/Chrome extension that blocks distracting sites 
 ## Commands
 
 ```sh
-npm test                              # node test.mjs — unit asserts against schedule.js
+npm test                              # test.mjs and prune.test.mjs — unit asserts against schedule.js and the prune plan
 npm run e2e                           # node e2e.mjs — drives a real Brave (macOS default path)
 npm run e2e -- "/path/to/Chromium"    # any other Chromium build
+npm run ship                          # from a branch: merge origin/main in, npm test, push, open or reuse a PR, merge it, fast-forward main, prune
+npm run prune                         # remove worktrees and branches whose tip is a merged PR's head, locally and on GitHub
 ```
 
 There is no test runner or test filter. `test.mjs` is a flat list of `node:assert/strict` calls and stops at the first failure. To run a subset, comment out the other asserts or run `node -e` against `schedule.js`.
