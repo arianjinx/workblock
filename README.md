@@ -17,7 +17,7 @@ computer's clock and turns a `declarativeNetRequest` rule set on and off.
 </picture>
 
 The demo above is a real browser running this folder as an unpacked extension.
-`npm run demo` records it again from a script, so it always matches the code.
+A script records it, and `npm run demo` records it again after a UI change.
 
 1. You set the sites, hours, and days in the toolbar popup.
 2. When the block starts, an open tab on a blocked site moves to the blocked
@@ -29,7 +29,12 @@ The demo above is a real browser running this folder as an unpacked extension.
 
 Workblock is not on the Chrome Web Store. Load it from this folder:
 
-1. Clone this repo.
+1. Clone this repo:
+
+   ```sh
+   git clone https://github.com/arianjinx/workblock.git
+   ```
+
 2. Open `brave://extensions`, or `chrome://extensions` in Chrome.
 3. Turn on **Developer mode** in the top-right corner.
 4. Click **Load unpacked** and select the cloned folder.
@@ -160,7 +165,7 @@ Run the checks:
 ```sh
 npm test                              # unit checks, plain Node
 npm run e2e                           # Brave at its default macOS path
-npm run e2e -- "/path/to/Chromium"    # any other Chromium build
+npm run e2e -- "/path/to/Chromium"    # Chrome for Testing or another Chromium build
 npm run demo                          # record the README demo again
 ```
 
