@@ -1,89 +1,151 @@
 # Workblock
 
-A Brave/Chrome extension that blocks distracting sites during your working
-hours, and gets out of the way outside them.
+A Brave and Chrome extension that blocks distracting sites during your working
+hours and stays out of the way outside them.
 
-No sudo, no daemon, no account, no server. It reads your computer's clock and
-flips a `declarativeNetRequest` rule set on and off.
+There is no sudo, no daemon, no account, and no server. Workblock reads your
+computer's clock and turns a `declarativeNetRequest` rule set on and off.
 
-## Install
+## Install from source
 
-Not on the Web Store. Load it from source:
+Workblock is not on the Chrome Web Store. Load it from this folder:
 
 1. Clone this repo.
-2. Open `brave://extensions` (or `chrome://extensions`).
-3. Turn on **Developer mode**, top right.
-4. Click **Load unpacked** and pick the cloned folder.
+2. Open `brave://extensions`, or `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** in the top-right corner.
+4. Click **Load unpacked** and select the cloned folder.
 
-Click the toolbar icon to set your sites, hours, and days. Defaults are the
-usual suspects, 09:00-17:00, Monday to Friday.
+To update, run `git pull` and click the reload button on the Workblock card in
+`brave://extensions`. Your settings stay.
 
-The badge reads `ON` while a block is active.
+## Set your sites and hours
+
+Click the Workblock toolbar icon, change the settings, and click **Save**.
+Changes apply as soon as you save.
+
+- **Blocked sites.** Enter one domain per line. `x.com` also blocks
+  `www.x.com`, `mobile.x.com`, and every other subdomain. If you paste a full
+  URL, Workblock keeps only the domain. Lines that start with `#` are skipped.
+- **Hours.** Enter whole hours in your computer's local time. The start hour is
+  inclusive and the end hour is exclusive, so `9` to `17` blocks from 09:00
+  through 16:59.
+- **Days.** Tick the days the window applies to.
+
+The defaults are 09:00 to 17:00, Monday to Friday, with these sites:
+`x.com`, `twitter.com`, `facebook.com`, `instagram.com`, `threads.net`,
+`tiktok.com`, `reddit.com`, `youtube.com`, `linkedin.com`, and
+`news.ycombinator.com`.
+
+The toolbar badge reads `ON` while a block is active.
+
+## What a blocked tab does
+
+During a block, any tab on a blocked site moves to Workblock's blocked page.
+That includes tabs that were already open when the window started and new
+visits during the window. The page shows the link the tab was on and the time
+the block ends.
+
+The tab keeps its link. Its URL becomes `blocked.html?url=<the original URL>`,
+so the link survives tab groups, saved groups, and session restore, which keep
+only a tab's current URL.
+
+When the site is no longer blocked, the tab goes back to the original link by
+itself. Only the tab you are looking at goes back right away, so a dozen
+background tabs don't all reload at 17:00. Each one goes back when you switch
+to it.
 
 ## How it works
 
-`background.js` wakes once a minute on a `chrome.alarms` tick, asks
-`schedule.js` whether the current local time is inside your window, and either
-installs one dynamic block rule per site or clears them all. Rules match with
-`requestDomains`, so `x.com` also covers `www.x.com` and `mobile.x.com`, and
-only `main_frame` requests are blocked, so embedded content and APIs on those
-domains keep working.
+`background.js` is the extension's service worker. It recomputes everything
+from scratch on a one-minute `chrome.alarms` tick, on browser startup, and on
+every settings change. Each run asks `schedule.js` whether the current local
+time is inside your window, then either installs one dynamic block rule per
+site or clears all of them.
+
+The rules match with `requestDomains`, which covers subdomains. They block only
+`main_frame` requests, which are top-level page loads. A YouTube video
+embedded in another site still plays, and other sites can still call APIs on
+blocked domains.
 
 Network rules alone are not enough. Sites that ship their own service worker,
-such as YouTube and a logged-in x.com, answer navigations straight from their
-cache, and that request never reaches the layer `declarativeNetRequest` sits
-on. So on the way into a block, Workblock also drops the service workers and
-cache storage for the blocked origins, which forces the next navigation back
-onto the network. Tabs already open when the window starts are bounced to
-`blocked.html`, and so is any tab that navigates to a blocked site during the
-window, instead of sitting on the browser's `ERR_BLOCKED_BY_CLIENT` page.
+such as YouTube and a logged-in x.com, answer navigations from their cache, and
+that request never reaches the layer where `declarativeNetRequest` runs. So on
+every tick during a block, Workblock does two more things in this order:
 
-A bounced tab never loses its link. Its URL becomes
-`blocked.html?url=<the original>`, so the link survives in tab groups, saved
-groups, and session restore, all of which keep only a tab's current URL. The
-blocked page shows the link, and once that site is no longer blocked it sends
-the tab back. Only the tab you are looking at goes back, so a dozen hidden tabs
-don't all reload at 17:00. Each one returns when you switch to it.
+1. It moves every tab on a blocked site to the blocked page.
+2. It removes service workers and cache storage for `https://<site>` and
+   `https://www.<site>`.
 
-That is what the three extra permissions buy:
+The order matters. A tab still showing the site registers its service worker
+again as soon as Workblock removes it. With the worker gone, the next
+navigation goes back to the network, where the rules apply.
 
-| Permission | Why |
+A `tabs.onUpdated` listener catches new visits between ticks. Without it, a
+new visit lands on the browser's own `ERR_BLOCKED_BY_CLIENT` error page.
+
+### Why each permission
+
+| Permission | Why Workblock needs it |
 | --- | --- |
-| `declarativeNetRequest` | the actual blocking |
-| `tabs` | find tabs already sitting on a blocked site |
-| `browsingData` | drop service workers that would serve the site from cache |
+| `declarativeNetRequest` | Install and remove the block rules. |
+| `alarms` | Wake the service worker once a minute to check the clock. |
+| `storage` | Keep your sites, hours, and days in `chrome.storage.sync`. |
+| `tabs` | Find tabs on a blocked site and move them to the blocked page. |
+| `browsingData` | Remove service workers that would serve a blocked site from cache. |
 
-All the logic that can actually be wrong lives in `schedule.js`, which imports
-no browser APIs. That is what `test.mjs` exercises. `e2e.mjs` loads the
-extension into a throwaway Brave profile and drives a real block and unblock.
+## Limits
 
-```sh
-npm test
-npm run e2e                       # needs Brave
-npm run e2e -- "/path/to/Chromium"  # or any other Chromium build
-```
+- **You can turn it off at any time.** Untick today in the popup, or disable
+  the extension at `brave://extensions`. Workblock stops idle drift. It does
+  not stop someone who has decided to get around it.
+- **One window, in whole hours.** Every selected day gets the same window. You
+  can't set a lunch break, a split shift, a 09:30 start, or a window that wraps
+  past midnight. `test.mjs` asserts that a wrapping window blocks nothing, so
+  the limit is explicit rather than silently wrong.
+- **Up to a minute late.** A block starts and ends on the first alarm tick
+  after the hour, so the switch can lag by up to about a minute.
+- **This browser profile only.** Safari, your phone, and other browsers are
+  not affected. For coverage across devices, block at the DNS level.
+- **The cache purge deletes data.** During a block, Workblock clears service
+  workers and cache storage for blocked sites every minute. Anything a blocked
+  site keeps there for offline use is gone. Cookies are not touched, so you
+  stay signed in.
 
 ## Why not an /etc/hosts blocker
 
-That was the first version of this repo, in the git history. It needed a root
-LaunchDaemon, and Chrome's Secure DNS setting defaults to `automatic`, which
-resolves over HTTPS and walks straight around `/etc/hosts`. The block was
-written correctly and the browser ignored it.
+The first version of this repo, still in the git history, edited `/etc/hosts`
+from a root LaunchDaemon. It did not work in the browser. Chrome's Secure DNS
+setting defaults to `automatic`, which resolves names over HTTPS and skips
+`/etc/hosts`. The block was written correctly, and the browser ignored it.
 
-## Known ceilings
+## Develop
 
-- **You can turn it off in two clicks**, from `brave://extensions`. This kills
-  idle drift, not real craving. To make it stick, force-install the extension
-  with a managed-policy profile (`ExtensionInstallForcelist`) and block
-  `brave://extensions` via `URLBlocklist` in the same profile.
-- **One window per day.** No lunch break, no split shifts, no overnight window
-  that wraps past midnight. `test.mjs` asserts the wrapping case is unsupported
-  rather than silently wrong.
-- **This browser only.** Safari, your phone, and any other browser are
-  untouched. Block at the DNS level if you want real coverage.
-- **The service worker purge is destructive.** Entering a block clears offline
-  caches for the blocked origins only. YouTube offline downloads are collateral.
+There is no build step and there are no dependencies. The extension is plain ES
+modules loaded straight from this folder. After you edit a file, click reload
+on the Workblock card in `brave://extensions`.
+
+| File | Contents |
+| --- | --- |
+| `schedule.js` | All the logic that can be wrong: the time window, rule building, host matching, site parsing, and the blocked-page URL. It imports no browser APIs. |
+| `background.js` | The service worker that applies the schedule. |
+| `blocked.html`, `blocked.js` | The blocked page and its logic for returning to the original link. |
+| `options.html`, `options.js` | The settings page, used as both the toolbar popup and the options page. |
+| `test.mjs` | Unit checks for `schedule.js`. |
+| `e2e.mjs` | End-to-end checks in a real browser. |
+
+Run the checks:
+
+```sh
+npm test                              # unit checks, plain Node
+npm run e2e                           # Brave at its default macOS path
+npm run e2e -- "/path/to/Chromium"    # any other Chromium build
+```
+
+`npm run e2e` needs Node 22 or later. It opens a browser window with a
+throwaway profile and remote debugging on port 9333, then blocks and unblocks
+`example.com`. It checks that blocked tabs keep their link, that a background
+tab waits until you view it, and that new visits land on the blocked page.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
