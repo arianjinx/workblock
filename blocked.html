@@ -67,8 +67,8 @@
 
 			h1 {
 				margin: 0;
-				/* Shrinks a long host to fit one line instead of breaking it mid-word. */
-				font-size: clamp(32px, calc(100cqi / (var(--chars, 10) * 0.52)), 72px);
+				--glyph-width-em: 0.52;
+				font-size: clamp(32px, calc(100cqi / (var(--host-length, 10) * var(--glyph-width-em))), 72px);
 				font-weight: 700;
 				line-height: 1;
 				letter-spacing: -0.01em;

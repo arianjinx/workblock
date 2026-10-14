@@ -1,7 +1,3 @@
-// Records the README demo in a real browser: node demo.mjs [path-to-browser]
-// Each scene drives the extension and returns one screenshot. The recorder frames
-// it on a neutral stage and writes docs/demo-light.gif and docs/demo-dark.gif,
-// plus the light frames as 1280x800 store screenshots in docs/screenshots/.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -18,7 +14,6 @@ const POPUP_WIDTH = 360;
 const READING = "https://news.ycombinator.com/newsguidelines.html";
 const VISIT = "https://www.youtube.com/";
 
-// A window that covers the current hour, so the block is live while recording.
 const hour = new Date().getHours();
 const ON = { startHour: hour, endHour: Math.min(hour + 2, 24), days: [0, 1, 2, 3, 4, 5, 6] };
 const OFF = { days: [] };
@@ -76,9 +71,6 @@ const SCENES = [
 		caption: "The block ends, and the tab goes back by itself",
 		hold: 3.5,
 		async run(s) {
-			// blocked.js can send a tab in view back before background.js drops the
-			// block rules, and the tab then lands on the browser's error page. A tab
-			// out of view waits, and goes back once it is brought to the front.
 			await s.setCfg(OFF);
 			await waitFor("the block rules to clear", async () => (await s.ruleCount()) === 0);
 			await s.reading.page.send("Page.bringToFront");
@@ -162,8 +154,6 @@ async function record(theme, frames) {
 		const { ext, extBase } = await connectWorker();
 		const tabUrl = (id) => ext.evaluate(`chrome.tabs.get(${id}).then(t => t.url)`);
 
-		// Emulation set before the first navigation, so each page lays out once with
-		// the theme and viewport it is captured at.
 		async function open(url) {
 			const before = new Set((await targets()).map((t) => t.id));
 			const id = await ext.evaluate(`chrome.tabs.create({ url: "about:blank" }).then(t => t.id)`);

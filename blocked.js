@@ -7,7 +7,7 @@ if (url) {
 	document.title = url;
 	const host = new URL(url).hostname.replace(/^www\./, "");
 	$("host").textContent = host;
-	$("host").style.setProperty("--chars", host.length);
+	$("host").style.setProperty("--host-length", host.length);
 	$("url").href = url;
 	$("url").textContent = url;
 } else {

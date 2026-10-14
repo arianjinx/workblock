@@ -1,5 +1,3 @@
-// Raw CDP plumbing for driving a real browser with this folder loaded as an
-// unpacked extension. Shared by e2e.mjs and demo.mjs.
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -64,11 +62,10 @@ export function connect(wsUrl) {
 	return opened.promise;
 }
 
-// Connects to Workblock's background service worker and returns it with the
-// extension's base URL. Chrome ships component extensions ("Contextual Tasks")
-// whose worker is also a background.js, and a worker is listed before its
-// script has run, so each candidate is asked for its manifest name until one
-// answers "Workblock" with storage ready.
+// Chrome ships component extensions ("Contextual Tasks") whose worker is also a
+// background.js, and a worker is listed before its script has run, so each
+// candidate is asked for its manifest name until one answers "Workblock" with
+// storage ready.
 export async function connectWorker() {
 	return waitFor("the Workblock service worker", async () => {
 		for (const t of await targets()) {
@@ -87,8 +84,6 @@ export async function connectWorker() {
 	});
 }
 
-// Starts the browser in a throwaway profile and returns the function that
-// kills it and deletes the profile.
 export async function launch(browserPath = DEFAULT_BROWSER) {
 	if (await fetch(`http://127.0.0.1:${PORT}/json/version`).then(() => true, () => false)) {
 		throw new Error(`something already answers on port ${PORT}; another e2e or demo run is probably using it`);
