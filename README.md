@@ -170,8 +170,10 @@ throwaway profile and remote debugging on port 9333, then blocks and unblocks
 tab waits until you view it, and that new visits land on the blocked page.
 
 After you change `options.html` or the blocked page, run `npm run demo` and
-commit the new GIFs. The script needs `ffmpeg` and network access, because the
-demo loads the Hacker News guidelines page.
+commit the new GIFs and screenshots. The script needs `ffmpeg`, ImageMagick,
+and network access, because the demo loads the Hacker News guidelines page.
+`docs/screenshots/` holds the light frames at 1280x800, the size the Chrome
+Web Store asks for.
 
 CI runs `npm test` and `npm run e2e` on every push to `main` and every pull
 request. The e2e job uses the current stable Chrome for Testing, because

@@ -5,7 +5,9 @@ const url = returnUrl(location.search);
 
 if (url) {
 	document.title = url;
-	$("host").textContent = new URL(url).hostname.replace(/^www\./, "");
+	const host = new URL(url).hostname.replace(/^www\./, "");
+	$("host").textContent = host;
+	$("host").style.setProperty("--chars", host.length);
 	$("url").href = url;
 	$("url").textContent = url;
 } else {

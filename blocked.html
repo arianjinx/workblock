@@ -44,7 +44,7 @@
 				color: var(--ink);
 				border-radius: 6px;
 			}
-			.claim { padding: 28px 32px 30px; min-width: 0; }
+			.claim { padding: 28px 32px 30px; min-width: 0; container-type: inline-size; }
 			.stub {
 				position: relative;
 				padding: 28px 32px 30px 28px;
@@ -67,7 +67,8 @@
 
 			h1 {
 				margin: 0;
-				font-size: clamp(48px, 9vw, 72px);
+				/* Shrinks a long host to fit one line instead of breaking it mid-word. */
+				font-size: clamp(32px, calc(100cqi / (var(--chars, 10) * 0.52)), 72px);
 				font-weight: 700;
 				line-height: 1;
 				letter-spacing: -0.01em;
