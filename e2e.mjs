@@ -2,21 +2,16 @@
 // Loads this folder as an unpacked extension into a throwaway profile, blocks
 // example.com, and checks a swept tab still knows where it came from.
 import assert from "node:assert/strict";
-import { connect, launch, sleep, targets, waitFor } from "./cdp.mjs";
+import { connect, connectWorker, launch, sleep, targets, waitFor } from "./cdp.mjs";
 import { blockedPageUrl } from "./schedule.js";
 
 const ORIGINAL = "https://example.com/some/page?q=1#frag";
 const ALWAYS = { startHour: 0, endHour: 24, days: [0, 1, 2, 3, 4, 5, 6] };
 
-const close = launch(process.argv[2]);
+const close = await launch(process.argv[2]);
 
 try {
-	const sw = await waitFor("extension service worker", async () =>
-		(await targets()).find((t) => t.type === "service_worker" && t.url.endsWith("/background.js")),
-	);
-	const ext = await connect(sw.webSocketDebuggerUrl);
-	await ext.send("Runtime.enable");
-	const extBase = sw.url.replace(/background\.js$/, "");
+	const { ext, extBase } = await connectWorker();
 	const setCfg = (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`);
 	const openTab = (url, active = true) => ext.evaluate(`chrome.tabs.create(${JSON.stringify({ url, active })}).then(t => t.id)`);
 	const tabUrl = (id) => ext.evaluate(`chrome.tabs.get(${id}).then(t => t.url)`);
