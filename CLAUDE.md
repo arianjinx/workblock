@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) and to Cursor when working with code in this repository. Cursor reads it through `AGENTS.md`, a symlink to this file.
 
 Workblock is a Manifest V3 Brave/Chrome extension that blocks distracting sites during a configured weekly window. It is plain ES modules loaded straight from the repo folder: no build step, no bundler, no dependencies, no linter config.
 
