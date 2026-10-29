@@ -41,4 +41,12 @@ To try changes by hand, load the folder unpacked from `brave://extensions` (Deve
 
 ## Git workflow
 
-Arian is the only developer, so agents merge their own PRs. Work in a worktree on a branch. When the work is committed and `npm test` passes, run `npm run ship` from the branch and do not hand the merge back to Arian. Run `npm run e2e` first for any change to the extension's behavior, because `ship` runs only `npm test`. `ship` ends with `npm run prune`, so start each new task on a fresh worktree branch.
+Work in a worktree on a branch. Run `npm run e2e` first for any change to the extension's behavior, because `npm run ship` runs only `npm test`. `ship` merges the open PR, fast-forwards local `main`, and ends with `npm run prune`, so start each new task on a fresh worktree branch. Cloud agents do not run `ship`.
+
+## Handoff
+
+Bots gather context. Cloud agents code on a branch under this repo's Cursor Project. Run the `verify` skill (`.claude/skills/verify/SKILL.md`) before opening a PR. A human approves every merge and anything public.
+
+## Repeated corrections
+
+When the same correction happens twice, turn it into a lint, a type, a test, or a rule. Prefer structure over prose, and record it in this file next to what enforces it. There is no linter and no typechecker in this repo, so a repeated correction lands as a test in `test.mjs`, or as a sentence here when it is a judgment call.
