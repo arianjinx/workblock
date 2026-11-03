@@ -7,11 +7,21 @@ description: "Verify Workblock before opening a PR. Use when a change needs inst
 
 Run this before opening a PR. Stop at the first failure. Leave `npm run ship` alone. It merges.
 
-There is one copy of this skill, at `.claude/skills/verify/SKILL.md`. Cursor loads `.claude/skills/`, and Claude Code loads a project skill of this name in place of its bundled `/verify`. Do not add a second copy under `.cursor/skills/`.
+There is one copy of this skill, at `.agents/skills/verify/SKILL.md`. Amp and Cursor load `.agents/skills/`. Claude Code loads it through the `.claude/skills` symlink, as a project skill that replaces its bundled `/verify`. Do not add a second copy under `.cursor/skills/` or a real `.claude/skills/` folder.
 
 ## Install
 
-Nothing to install. `package.json` has no dependencies, and `.cursor/cloud-install.sh` exits 0. Skip `npm install`.
+`package.json` has no dependencies, so skip `npm install`. `.agents/setup` installs what the checks below drive: Node 22 or later, xvfb, and Chrome for Testing, the way CI does. Amp runs it for each orb, `.cursor/environment.json` runs it as the Cursor cloud install, and the SessionStart hook runs it in Claude Code cloud. It is idempotent. Run it yourself when `xvfb-run` or the Chrome below is missing:
+
+```sh
+bash .agents/setup
+```
+
+The same command CI uses prints the Chrome path, and downloads nothing when that Chrome is already installed:
+
+```sh
+CHROME=$(npx -y @puppeteer/browsers@3.2.4 install chrome@stable --path ~/.cache/workblock/browsers --format '{{path}}' | tail -n1)
+```
 
 `npm run e2e` needs Node 22 or later. CI uses Node 24 (`.github/workflows/ci.yml`). The run that wrote this skill used Node v22.23.4.
 
@@ -62,7 +72,7 @@ npm run e2e -- "/path/to/Chromium"
 
 With no argument, `cdp.mjs` launches macOS Brave at `/Applications/Brave Browser.app/Contents/MacOS/Brave Browser`. On Linux, pass a binary. Branded Chrome 137 and later ignores `--load-extension`. CI installs Chrome for Testing and runs `xvfb-run -a npm run e2e -- "$CHROME"` because the GitHub runner has no display. `CHROME` is a workflow variable. `e2e.mjs` reads the path from its argument, not from the environment.
 
-On a machine with a display, `npm run e2e -- <chrome-for-testing>` is enough. That command passed on the Linux VM that wrote this skill, against Chrome for Testing stable, with Node v22.23.4. Branded Google Chrome on that VM was 156 and was left unused.
+In a cloud machine after `.agents/setup`, with `CHROME` set as in Install, run `xvfb-run -a npm run e2e -- "$CHROME"`. On a machine with a display, `npm run e2e -- <chrome-for-testing>` is enough. That command passed on the Linux VM that wrote this skill, against Chrome for Testing stable, with Node v22.23.4. Branded Google Chrome on that VM was 156 and was left unused.
 
 `e2e` and `demo` both listen on port 9333. Only one of them can run at a time. If something already answers on that port, stop that run. The script kills the browser it spawned and deletes its profile. If a run is interrupted, stop the process listening on 9333.
 
@@ -84,7 +94,7 @@ If Chrome exits with `No usable sandbox!`, CI lifts Ubuntu's AppArmor restrictio
 
 | Command | Names it reads |
 | --- | --- |
-| `bash .cursor/cloud-install.sh` | none |
+| `bash .agents/setup` | `HOME` |
 | `npm test` | none |
 | `npm run e2e` | none. The browser path is an argument. |
 | `npm run demo` | none |
