@@ -1,4 +1,3 @@
-// Removes the worktrees and branches whose tip a merged PR shipped: node prune.mjs
 import { spawnSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";

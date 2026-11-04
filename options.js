@@ -36,7 +36,7 @@ $("save").addEventListener("click", async () => {
 		days: [...$("days").querySelectorAll(":checked")].map((el) => Number(el.value)),
 	};
 	await chrome.storage.sync.set(next);
-	$("sites").value = next.sites.join("\n"); // reflect the normalised list back
+	$("sites").value = next.sites.join("\n");
 	showStatus(next);
 	$("saved").classList.add("show");
 	setTimeout(() => $("saved").classList.remove("show"), 1200);
