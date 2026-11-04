@@ -2,6 +2,8 @@ import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isWorkHours } from "
 
 const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 
+const sendToBlockedPage = (tabId, url) => chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
+
 // A site's own service worker answers navigations from its cache, so the request
 // never reaches the network layer that declarativeNetRequest sits on. YouTube and
 // a logged-in x.com both do this. Dropping their service worker forces the next
@@ -16,59 +18,48 @@ async function dropServiceWorkers(sites) {
 // clicking around in an SPA never issues a fresh navigation.
 async function sweepOpenTabs(sites) {
 	for (const tab of await chrome.tabs.query({})) {
-		if (tab.url && hostMatches(tab.url, sites)) {
-			chrome.tabs.update(tab.id, { url: blockedPageUrl(BLOCKED_PAGE, tab.url) });
-		}
+		if (tab.url && hostMatches(tab.url, sites)) sendToBlockedPage(tab.id, tab.url);
 	}
+}
+
+async function evictBlockedSites(sites) {
+	await sweepOpenTabs(sites);
+	await dropServiceWorkers(sites);
 }
 
 async function applySchedule() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const blocking = isWorkHours(cfg, new Date());
 	const old = await chrome.declarativeNetRequest.getDynamicRules();
+	const rules = blocking ? buildRules(cfg.sites) : [];
 
 	await chrome.declarativeNetRequest.updateDynamicRules({
-		removeRuleIds: old.map((r) => r.id),
-		addRules: blocking ? buildRules(cfg.sites) : [],
+		removeRuleIds: [...new Set([...old, ...rules].map((r) => r.id))],
+		addRules: rules,
 	});
 
 	if (blocking) {
-		// Order matters: a tab still sitting on the site re-registers the worker the
-		// moment we drop it, so the tab has to go first. Unconditional and every tick,
-		// because onInstalled and onStartup both turn out to be unreliable when an
-		// already-installed extension is reloaded. Only blocked origins are touched.
-		await sweepOpenTabs(cfg.sites);
-		await dropServiceWorkers(cfg.sites);
+		// Unconditional and every tick, because onInstalled and onStartup both turn out
+		// to be unreliable when an already-installed extension is reloaded. Only blocked
+		// origins are touched.
+		await evictBlockedSites(cfg.sites);
 	}
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
 	chrome.action.setBadgeBackgroundColor({ color: "#c0392b" });
 }
 
-// Each run reads the rule set and then rewrites it. Two runs at once both read the
-// same old rules and the second one's add collides on rule 1, so queue them.
-let latest = Promise.resolve();
-function sync() {
-	latest = latest.then(applySchedule, applySchedule);
-	return latest;
-}
-
-// 1 min is the shortest period MV3 allows, and it is what wakes the service
-// worker back up after Chrome suspends it.
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.alarms.create("tick", { periodInMinutes: 1 });
-	sync();
+	applySchedule();
 });
-chrome.runtime.onStartup.addListener(sync);
-chrome.alarms.onAlarm.addListener(sync);
-chrome.storage.onChanged.addListener(sync);
+chrome.runtime.onStartup.addListener(applySchedule);
+chrome.alarms.onAlarm.addListener(applySchedule);
+chrome.storage.onChanged.addListener(applySchedule);
 
-// A new visit during a block lands on the browser's own ERR_BLOCKED_BY_CLIENT
-// page, which would otherwise sit there until the next tick.
-chrome.tabs.onUpdated.addListener(async (tabId, { url }) => {
+async function bounceBlockedVisit(tabId, { url }) {
 	if (!url) return;
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
-	if (isWorkHours(cfg, new Date()) && hostMatches(url, cfg.sites)) {
-		chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
-	}
-});
+	if (isWorkHours(cfg, new Date()) && hostMatches(url, cfg.sites)) sendToBlockedPage(tabId, url);
+}
+chrome.tabs.onUpdated.addListener(bounceBlockedVisit);
