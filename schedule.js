@@ -24,6 +24,7 @@ export function isWorkHours(cfg, now) {
 	return h >= cfg.startHour && h < cfg.endHour;
 }
 
+// Saved lists may hold capitals from before parseSites lowercased them, so match lowercase.
 // requestDomains matches the domain AND its subdomains, so "x.com" already
 // covers www.x.com and mobile.x.com. No www. variants needed.
 export function buildRules(sites) {
@@ -31,7 +32,7 @@ export function buildRules(sites) {
 		id: i + 1,
 		priority: 1,
 		action: { type: "block" },
-		condition: { requestDomains: [site], resourceTypes: ["main_frame"] },
+		condition: { requestDomains: [site.toLowerCase()], resourceTypes: ["main_frame"] },
 	}));
 }
 
@@ -45,7 +46,10 @@ export function hostMatches(url, sites) {
 	} catch {
 		return false;
 	}
-	return sites.some((site) => host === site || host.endsWith(`.${site}`));
+	return sites.some((site) => {
+		site = site.toLowerCase();
+		return host === site || host.endsWith(`.${site}`);
+	});
 }
 
 export function parseSites(text) {

@@ -22,14 +22,8 @@ async function sweepOpenTabs(sites) {
 	}
 }
 
-// Hostnames are lowercase, and settings saved before parseSites lowercased them may not be.
-async function loadConfig() {
-	const cfg = await chrome.storage.sync.get(DEFAULTS);
-	return { ...cfg, sites: cfg.sites.map((site) => site.toLowerCase()) };
-}
-
 async function applySchedule() {
-	const cfg = await loadConfig();
+	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const blocking = isWorkHours(cfg, new Date());
 	const old = await chrome.declarativeNetRequest.getDynamicRules();
 
@@ -73,7 +67,7 @@ chrome.storage.onChanged.addListener(sync);
 // page, which would otherwise sit there until the next tick.
 chrome.tabs.onUpdated.addListener(async (tabId, { url }) => {
 	if (!url) return;
-	const cfg = await loadConfig();
+	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	if (isWorkHours(cfg, new Date()) && hostMatches(url, cfg.sites)) {
 		chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
 	}

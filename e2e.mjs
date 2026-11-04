@@ -76,6 +76,8 @@ try {
 	await waitFor("block rules", () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length > 0)`));
 	const upper = await openTab(savedUpper);
 	await landsOn(upper, blockedPageUrl(extBase + "blocked.html", savedUpper), "a site saved as Example.com to block", 5000);
+	await sleep(3000);
+	assert.equal(await tabUrl(upper), blockedPageUrl(extBase + "blocked.html", savedUpper), "the blocked page does not send the tab back");
 	console.log("ok - a site saved with capitals still blocks");
 
 	const ruleCount = () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`);
