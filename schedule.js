@@ -51,7 +51,7 @@ export function hostMatches(url, sites) {
 export function parseSites(text) {
 	return text
 		.split("\n")
-		.map((line) => line.trim().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""))
+		.map((line) => line.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, ""))
 		.filter((line) => line && !line.startsWith("#"));
 }
 

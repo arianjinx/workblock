@@ -31,6 +31,7 @@ assert.deepEqual(buildRules([]), [], "empty site list yields no rules");
 
 // pasted URLs get normalised down to a bare domain
 assert.deepEqual(parseSites("https://www.x.com/home\n\n# a comment\n  reddit.com  \n"), ["x.com", "reddit.com"]);
+assert.deepEqual(parseSites("HTTPS://WWW.Example.COM/Path\nReddit.com"), ["example.com", "reddit.com"], "site names are lowercased");
 assert.deepEqual(parseSites(""), [], "empty input is not a rule for everything");
 
 // tab-URL backstop for service-worker-served navigations

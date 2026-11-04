@@ -2,7 +2,7 @@
 # Readies a checkout for an agent in any harness: Amp runs it for a fresh orb, Cursor as its cloud install, and
 # Claude Code cloud from the SessionStart hook. Each may run it over disk a previous run prepared, so every step is
 # idempotent. package.json has no dependencies, so this installs only what the verify skill's checks drive: Node 22 or
-# later for npm test and npm run e2e, Chrome for Testing (branded Chrome 137+ ignores --load-extension), and xvfb so
+# later for npm test and npm run e2e, ffmpeg and ImageMagick for npm run demo, Chrome for Testing (branded Chrome 137+ ignores --load-extension), and xvfb so
 # e2e has a display. It installs Chrome the way CI does, into $HOME/.cache/workblock/browsers.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -66,6 +66,15 @@ chrome() {
   fi
 }
 
+demo_tools() {
+  command -v ffmpeg >/dev/null 2>&1 && command -v magick >/dev/null 2>&1 && return
+  can_sudo || { echo "setup: ffmpeg or magick is missing and sudo is unavailable" >&2 && return 1; }
+  sudo apt-get update
+  sudo apt-get install -y --no-install-recommends ffmpeg imagemagick
+  # Distro packages older than ImageMagick 7 ship only convert, and demo.mjs calls magick.
+  command -v magick >/dev/null 2>&1 || { echo "setup: the imagemagick package has no magick command, so npm run demo needs ImageMagick 7" >&2 && return 1; }
+}
+
 # A cloud that blocks the browser download still gets a working checkout for npm test.
 chrome_or_warn() {
   chrome || echo "setup: no Chrome for Testing yet, so npm run e2e needs a Chromium path" >&2
@@ -75,3 +84,4 @@ export PATH="/usr/local/bin:$PATH"
 step 'node 22 or later' node_runtime
 step 'xvfb' xvfb
 step 'chrome for testing' chrome_or_warn
+step 'ffmpeg and imagemagick for demo' demo_tools || echo "setup: npm run demo needs ffmpeg and magick" >&2
