@@ -1,4 +1,3 @@
-// Self-check for the prune plan: node prune.test.mjs
 import assert from "node:assert/strict";
 import { plan } from "./prune.mjs";
 

@@ -1,6 +1,3 @@
-// End-to-end check in a real browser: node e2e.mjs [path-to-browser]
-// Loads this folder as an unpacked extension into a throwaway profile, blocks
-// example.com, and checks a swept tab still knows where it came from.
 import assert from "node:assert/strict";
 import { connect, connectWorker, launch, sleep, targets, waitFor } from "./cdp.mjs";
 import { blockedPageUrl } from "./schedule.js";

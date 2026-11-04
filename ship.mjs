@@ -1,4 +1,3 @@
-// Merges the current branch to main through a PR, then prunes: node ship.mjs
 import { spawnSync } from "node:child_process";
 import { ghApi, git, mergePr, prune, repo, syncMain } from "./prune.mjs";
 

@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Readies a checkout for an agent in any harness: Amp runs it for a fresh orb, Cursor as its cloud install, and
-# Claude Code cloud from the SessionStart hook. Each may run it over disk a previous run prepared, so every step is
-# idempotent. package.json has no dependencies, so this installs only what the verify skill's checks drive: Node 22 or
-# later for npm test and npm run e2e, ffmpeg and ImageMagick for npm run demo, Chrome for Testing (branded Chrome 137+ ignores --load-extension), and xvfb so
-# e2e has a display. It installs Chrome the way CI does, into $HOME/.cache/workblock/browsers.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -20,7 +15,6 @@ step() {
 
 can_sudo() { command -v sudo >/dev/null 2>&1 && sudo -n true >/dev/null 2>&1; }
 
-# CI uses Node 24. Any Node from 22 on runs the scripts, so an image's newer or older-but-22 Node stays.
 node_runtime() {
   local major="" arch node_arch work tarball
   command -v node >/dev/null 2>&1 && major=$(node -p 'process.versions.node.split(".")[0]')
@@ -50,12 +44,10 @@ xvfb() {
   sudo apt-get install -y --no-install-recommends xvfb xauth
 }
 
-# The same install as CI. It prints the binary's path, and a rerun with Chrome already there downloads nothing.
 chrome() {
   local path
   path=$(npx -y @puppeteer/browsers@3.2.4 install chrome@stable --path "$browsers" --format '{{path}}' | tail -n1)
   if ! "$path" --version >/dev/null 2>&1 && can_sudo; then
-    # A bare image lacks Chrome's shared libraries. Installing them needs root.
     sudo env "PATH=$PATH" npx -y @puppeteer/browsers@3.2.4 install chrome@stable --path "$browsers" --install-deps >/dev/null
   fi
   "$path" --version
@@ -71,11 +63,9 @@ demo_tools() {
   can_sudo || { echo "setup: ffmpeg or magick is missing and sudo is unavailable" >&2 && return 1; }
   sudo apt-get update
   sudo apt-get install -y --no-install-recommends ffmpeg imagemagick
-  # Distro packages older than ImageMagick 7 ship only convert, and demo.mjs calls magick.
   command -v magick >/dev/null 2>&1 || { echo "setup: the imagemagick package has no magick command, so npm run demo needs ImageMagick 7" >&2 && return 1; }
 }
 
-# A cloud that blocks the browser download still gets a working checkout for npm test.
 chrome_or_warn() {
   chrome || echo "setup: no Chrome for Testing yet, so npm run e2e needs a Chromium path" >&2
 }

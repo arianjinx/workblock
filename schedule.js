@@ -1,5 +1,3 @@
-// Pure logic, no chrome APIs, so test.mjs can import it under plain node.
-
 export const DEFAULTS = {
 	sites: [
 		"x.com",
@@ -36,9 +34,6 @@ export function buildRules(sites) {
 	}));
 }
 
-// A site's own service worker can answer a navigation straight from its cache,
-// so the request never reaches the network layer declarativeNetRequest sits on.
-// This is the backstop: match the URL a tab actually landed on.
 export function hostMatches(url, sites) {
 	let host;
 	try {
