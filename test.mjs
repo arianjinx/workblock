@@ -42,6 +42,8 @@ assert.equal(hostMatches("https://notyoutube.com/", list), false, "suffix must l
 assert.equal(hostMatches("https://youtube.com.evil.test/", list), false, "domain must be the actual host");
 assert.equal(hostMatches("chrome-extension://abc/blocked.html", list), false, "never bounce our own page");
 assert.equal(hostMatches("about:blank", list), false, "non-http URLs are not matches");
+assert.equal(hostMatches("https://www.example.com/", ["Example.com"]), true, "a site saved with capitals still matches");
+assert.deepEqual(buildRules(["Example.com"])[0].condition.requestDomains, ["example.com"], "rules use lowercase domains");
 assert.equal(hostMatches("", list), false, "unparseable URL is not a match");
 
 // the blocked page round-trips the URL it replaced, query and fragment included

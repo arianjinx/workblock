@@ -71,6 +71,15 @@ try {
 	await landsOn(fresh, blockedPageUrl(extBase + "blocked.html", freshUrl), "new visit to land on the blocked page", 5000);
 	console.log("ok - a new visit during a block lands on the blocked page, not the browser error");
 
+	const savedUpper = "https://example.com/saved-uppercase";
+	await setCfg({ sites: ["Example.com"], ...ALWAYS });
+	await waitFor("block rules", () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length > 0)`));
+	const upper = await openTab(savedUpper);
+	await landsOn(upper, blockedPageUrl(extBase + "blocked.html", savedUpper), "a site saved as Example.com to block", 5000);
+	await sleep(3000);
+	assert.equal(await tabUrl(upper), blockedPageUrl(extBase + "blocked.html", savedUpper), "the blocked page does not send the tab back");
+	console.log("ok - a site saved with capitals still blocks");
+
 	const ruleCount = () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`);
 	await setCfg({ days: [] });
 	await waitFor("rules cleared", async () => (await ruleCount()) === 0);
