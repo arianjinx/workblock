@@ -3,10 +3,8 @@ import { spawnSync } from "node:child_process";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// State: { main, here, worktrees: [{ path, branch, head }], inUse, local, remote, merged }
-// where local and remote map branch to sha, and merged maps branch to merged PR head shas.
 export function plan(s) {
-	const mergedAtTip = (branch, sha) => branch !== "main" && (s.merged[branch] ?? []).includes(sha);
+	const mergedAtTip = (branch, sha) => branch !== "main" && (s.mergedHeadShasByBranch[branch] ?? []).includes(sha);
 	const actions = [];
 	const busy = new Set();
 	for (const w of s.worktrees) {
@@ -29,12 +27,12 @@ export function plan(s) {
 			actions.push({ kind: "keep", what: w.path, why });
 		} else actions.push({ kind: "remove-worktree", path: w.path });
 	}
-	for (const [branch, sha] of Object.entries(s.local)) {
+	for (const [branch, sha] of Object.entries(s.shaByLocalBranch)) {
 		if (branch === "main" || busy.has(branch)) continue;
 		if (mergedAtTip(branch, sha)) actions.push({ kind: "delete-local", branch });
 		else actions.push({ kind: "keep", what: branch, why: "no merged PR at its tip" });
 	}
-	for (const [branch, sha] of Object.entries(s.remote)) {
+	for (const [branch, sha] of Object.entries(s.shaByRemoteBranch)) {
 		if (mergedAtTip(branch, sha)) actions.push({ kind: "delete-remote", branch });
 	}
 	return actions;
@@ -85,6 +83,14 @@ const refs = (prefix) =>
 			.filter(([branch]) => branch !== "HEAD"),
 	);
 
+function worktreesInUse(worktrees) {
+	const paths = worktrees.map((w) => w.path);
+	const cwds = run(["lsof", "-a", "-d", "cwd", "-Fn"]);
+	if (!cwds.ok) return paths;
+	const lines = cwds.out.split("\n");
+	return paths.filter((path) => lines.some((line) => line === `n${path}` || line.startsWith(`n${path}/`)));
+}
+
 export function read() {
 	git("fetch", "--prune", "--quiet", "origin");
 	git("worktree", "prune");
@@ -112,19 +118,14 @@ export function read() {
 			head: block.match(/^HEAD (\w+)$/m)?.[1] ?? "",
 			branch: block.match(/^branch refs\/heads\/(.+)$/m)?.[1] ?? null,
 		}));
-	// Without lsof every worktree counts as in use, so nothing is removed by mistake.
-	const cwds = run(["lsof", "-a", "-d", "cwd", "-Fn"]);
-	const inUse = worktrees
-		.map((w) => w.path)
-		.filter((path) => !cwds.ok || cwds.out.split("\n").some((line) => line === `n${path}` || line.startsWith(`n${path}/`)));
 	return {
 		main: dirname(git("rev-parse", "--path-format=absolute", "--git-common-dir").out),
 		here: git("rev-parse", "--show-toplevel").out,
 		worktrees,
-		inUse,
-		local: refs("refs/heads/"),
-		remote: refs("refs/remotes/origin/"),
-		merged,
+		inUse: worktreesInUse(worktrees),
+		shaByLocalBranch: refs("refs/heads/"),
+		shaByRemoteBranch: refs("refs/remotes/origin/"),
+		mergedHeadShasByBranch: merged,
 	};
 }
 
