@@ -1,4 +1,4 @@
-import { DEFAULTS, isWorkHours, parseSites } from "./schedule.js";
+import { DEFAULTS, isValidWindow, isWorkHours, parseSites } from "./schedule.js";
 
 const $ = (id) => document.getElementById(id);
 const DAY_NAMES = ["S", "M", "T", "W", "T", "F", "S"];
@@ -35,6 +35,12 @@ $("save").addEventListener("click", async () => {
 		endHour: Number($("endHour").value),
 		days: [...$("days").querySelectorAll(":checked")].map((el) => Number(el.value)),
 	};
+	if (!isValidWindow(next)) {
+		$("endHour").setCustomValidity("Pick an end hour after the start hour.");
+		$("endHour").reportValidity();
+		return;
+	}
+	$("endHour").setCustomValidity("");
 	await chrome.storage.sync.set(next);
 	$("sites").value = next.sites.join("\n");
 	showStatus(next);

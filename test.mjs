@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
-import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isWorkHours, parseSites, returnUrl } from "./schedule.js";
+import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isValidWindow, isWorkHours, parseSites, webReturnUrl } from "./schedule.js";
 
-const at = (day, hour) => new Date(2026, 6, 26 + day, hour, 30); // Jul 26 2026 is a Sunday
+const SUNDAY = new Date(2026, 6, 26);
+const at = (day, hour) => new Date(SUNDAY.getFullYear(), SUNDAY.getMonth(), SUNDAY.getDate() + day, hour, 30);
+assert.equal(at(0, 10).getDay(), 0, "day 0 is a Sunday");
 
 assert.equal(isWorkHours(DEFAULTS, at(3, 9)), true, "09:30 Wed blocks");
 assert.equal(isWorkHours(DEFAULTS, at(3, 16)), true, "16:30 Wed blocks");
@@ -14,8 +16,9 @@ assert.equal(isWorkHours(DEFAULTS, at(0, 10)), false, "Sunday is free");
 assert.equal(isWorkHours(DEFAULTS, at(1, 10)), true, "Monday blocks");
 assert.equal(isWorkHours(DEFAULTS, at(5, 10)), true, "Friday blocks");
 
-// a night-shift window (start > end) is NOT supported - assert the known ceiling
-assert.equal(isWorkHours({ ...DEFAULTS, startHour: 22, endHour: 2 }, at(3, 23)), false, "wrapping window unsupported");
+assert.equal(isValidWindow(DEFAULTS), true, "the default window is valid");
+assert.equal(isValidWindow({ startHour: 22, endHour: 2 }), false, "a window that wraps past midnight is rejected");
+assert.equal(isValidWindow({ startHour: 9, endHour: 9 }), false, "an empty window is rejected");
 
 const rules = buildRules(["x.com", "reddit.com"]);
 assert.equal(rules.length, 2);
@@ -42,9 +45,9 @@ assert.equal(hostMatches("", list), false, "unparseable URL is not a match");
 
 const original = "https://www.youtube.com/watch?v=abc&t=42s#comments";
 const page = blockedPageUrl("chrome-extension://id/blocked.html", original);
-assert.equal(returnUrl(new URL(page).search), original, "original URL survives the round trip");
-assert.equal(returnUrl(""), null, "a bare blocked page has nowhere to return to");
-assert.equal(returnUrl("?url=javascript%3Aalert(1)"), null, "never return to a javascript: URL");
-assert.equal(returnUrl("?url=chrome-extension%3A%2F%2Fid%2Fblocked.html"), null, "never return to an extension page");
+assert.equal(webReturnUrl(new URL(page).search), original, "original URL survives the round trip");
+assert.equal(webReturnUrl(""), null, "a bare blocked page has nowhere to return to");
+assert.equal(webReturnUrl("?url=javascript%3Aalert(1)"), null, "never return to a javascript: URL");
+assert.equal(webReturnUrl("?url=chrome-extension%3A%2F%2Fid%2Fblocked.html"), null, "never return to an extension page");
 
 console.log("ok - all checks passed");

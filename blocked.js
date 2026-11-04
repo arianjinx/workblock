@@ -1,7 +1,7 @@
-import { DEFAULTS, hostMatches, isWorkHours, returnUrl } from "./schedule.js";
+import { DEFAULTS, hostMatches, isWorkHours, webReturnUrl } from "./schedule.js";
 
 const $ = (id) => document.getElementById(id);
-const url = returnUrl(location.search);
+const url = webReturnUrl(location.search);
 
 if (url) {
 	document.title = url;
@@ -24,19 +24,20 @@ function showReturnTime(cfg, now) {
 	$("left").textContent = `in ${h ? `${h} h ` : ""}${mins % 60} min`;
 }
 
-// Only the visible tab goes back, so a dozen hidden tabs don't all reload the
-// moment the window ends. The rest go back when you switch to them.
-async function returnIfFree() {
+function returnLegacySweptTab() {
+	if (history.length > 1) history.back();
+}
+
+async function returnVisibleTabIfFree() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const now = new Date();
 	showReturnTime(cfg, now);
 	if (document.hidden) return;
 	if (url && !(isWorkHours(cfg, now) && hostMatches(url, cfg.sites))) location.replace(url);
-	// Tabs swept before the page kept its URL still have the site one step back.
-	if (!url && !isWorkHours(cfg, now) && history.length > 1) history.back();
+	if (!url && !isWorkHours(cfg, now)) returnLegacySweptTab();
 }
 
-returnIfFree();
-document.addEventListener("visibilitychange", returnIfFree);
-chrome.storage.onChanged.addListener(returnIfFree);
-setInterval(returnIfFree, 60_000);
+returnVisibleTabIfFree();
+document.addEventListener("visibilitychange", returnVisibleTabIfFree);
+chrome.storage.onChanged.addListener(returnVisibleTabIfFree);
+setInterval(returnVisibleTabIfFree, 60_000);

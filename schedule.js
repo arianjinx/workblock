@@ -16,6 +16,8 @@ export const DEFAULTS = {
 	days: [1, 2, 3, 4, 5], // Date#getDay, 0=Sun .. 6=Sat
 };
 
+export const isValidWindow = (cfg) => cfg.startHour < cfg.endHour;
+
 export function isWorkHours(cfg, now) {
 	if (!cfg.days.includes(now.getDay())) return false;
 	const h = now.getHours();
@@ -60,8 +62,7 @@ export function blockedPageUrl(page, url) {
 	return `${page}?url=${encodeURIComponent(url)}`;
 }
 
-// Only ever send a tab back to a web page, never a javascript: or extension URL.
-export function returnUrl(search) {
+export function webReturnUrl(search) {
 	const url = new URLSearchParams(search).get("url");
 	return /^https?:\/\//.test(url ?? "") ? url : null;
 }
