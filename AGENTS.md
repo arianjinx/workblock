@@ -62,3 +62,8 @@ Bots gather context. Cloud agents code on a branch under this repo's Cursor Proj
 ## Repeated corrections
 
 When the same correction happens twice, turn it into a lint, a type, a test, or a rule. Prefer structure over prose, and record it in this file next to what enforces it. There is no linter and no typechecker in this repo, so a repeated correction lands as a test in `test.mjs`, or as a sentence here when it is a judgment call.
+
+## Cursor Cloud specific instructions
+
+When you run as a Cursor cloud agent, read `docs/cursor-cloud.md` first. It
+holds the install command, the verify command and the secrets notes.
