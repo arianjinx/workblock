@@ -45,7 +45,6 @@ export const git = (...args) => run(["git", ...args]);
 
 export const repo = () => git("remote", "get-url", "origin").out.match(/[:/]([^/:]+\/[^/]+?)(\.git)?$/)?.[1] ?? "";
 const proxyInjectsToken = process.env.CLAUDE_CODE_REMOTE === "true";
-// REST only, because the cloud proxy rejects the GraphQL that `gh pr` uses.
 export const ghApi = (...args) => {
 	if (!process.env.GH_TOKEN && !proxyInjectsToken) {
 		process.env.GH_TOKEN = run(["gh", "auth", "token", "--user", repo().split("/")[0]]).out;
@@ -53,12 +52,13 @@ export const ghApi = (...args) => {
 	return run(["gh", "api", ...args]);
 };
 
-// GitHub computes mergeability after a push, so a merge right after one can briefly refuse.
+const MERGE_ATTEMPTS = 5;
+const MERGE_WAIT_MS = 3000;
 export function mergePr(number, sha) {
 	for (let attempt = 1; ; attempt++) {
 		const merge = ghApi("-X", "PUT", `repos/${repo()}/pulls/${number}/merge`, "-f", "merge_method=merge", "-f", `sha=${sha}`);
-		if (merge.ok || attempt === 5 || !/HTTP 405/.test(merge.err)) return merge;
-		Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+		if (merge.ok || attempt === MERGE_ATTEMPTS || !/HTTP 405/.test(merge.err)) return merge;
+		Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, MERGE_WAIT_MS);
 	}
 }
 

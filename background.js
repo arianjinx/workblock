@@ -4,18 +4,12 @@ const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 
 const sendToBlockedPage = (tabId, url) => chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
 
-// A site's own service worker answers navigations from its cache, so the request
-// never reaches the network layer that declarativeNetRequest sits on. YouTube and
-// a logged-in x.com both do this. Dropping their service worker forces the next
-// navigation back onto the network, where the rules apply.
 async function dropServiceWorkers(sites) {
 	if (!sites.length) return;
 	const origins = sites.flatMap((s) => [`https://${s}`, `https://www.${s}`]);
 	await chrome.browsingData.remove({ origins }, { serviceWorkers: true, cacheStorage: true });
 }
 
-// Tabs already open when the window starts are still rendering the site, and
-// clicking around in an SPA never issues a fresh navigation.
 async function sweepOpenTabs(sites) {
 	for (const tab of await chrome.tabs.query({})) {
 		if (tab.url && hostMatches(tab.url, sites)) sendToBlockedPage(tab.id, tab.url);
@@ -38,12 +32,7 @@ async function applySchedule() {
 		addRules: rules,
 	});
 
-	if (blocking) {
-		// Unconditional and every tick, because onInstalled and onStartup both turn out
-		// to be unreliable when an already-installed extension is reloaded. Only blocked
-		// origins are touched.
-		await evictBlockedSites(cfg.sites);
-	}
+	if (blocking) await evictBlockedSites(cfg.sites);
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
 	chrome.action.setBadgeBackgroundColor({ color: "#c0392b" });

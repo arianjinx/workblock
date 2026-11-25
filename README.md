@@ -124,7 +124,7 @@ new visit lands on the browser's own `ERR_BLOCKED_BY_CLIENT` error page.
   not stop someone who has decided to get around it.
 - **One window, in whole hours.** Every selected day gets the same window. You
   can't set a lunch break, a split shift, a 09:30 start, or a window that wraps
-  past midnight. `test.mjs` asserts that a wrapping window blocks nothing, so
+  past midnight. `scripts/score` checks that a wrapping window blocks nothing, so
   the limit is explicit rather than silently wrong.
 - **Up to a minute late.** A block starts and ends on the first alarm tick
   after the hour, so the switch can lag by up to about a minute.
@@ -153,7 +153,7 @@ on the Workblock card in `brave://extensions`.
 | `background.js` | The service worker that applies the schedule. |
 | `blocked.html`, `blocked.js` | The blocked page and its logic for returning to the original link. |
 | `options.html`, `options.js` | The settings page, used as both the toolbar popup and the options page. |
-| `test.mjs` | Unit checks for `schedule.js`. |
+| `scripts/score` | The meter for GOAL.md. It checks `schedule.js` against the README. |
 | `e2e.mjs` | End-to-end checks in a real browser. |
 | `demo.mjs` | Records `docs/demo-light.gif` and `docs/demo-dark.gif` in a real browser. |
 | `cdp.mjs` | Starts a browser with the extension loaded and talks to it over the Chrome DevTools Protocol. `e2e.mjs` and `demo.mjs` both use it. |

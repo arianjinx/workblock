@@ -205,8 +205,6 @@ async function record(theme, frames) {
 	}
 }
 
-// The concat demuxer holds each frame for its duration. The last frame is listed
-// twice because the final entry's duration is otherwise ignored.
 function writeGif(theme, files, frames) {
 	const list = join(frames, `${theme}.txt`);
 	writeFileSync(list, [...SCENES.map((scene, i) => `file '${files[i]}'\nduration ${scene.hold}`), `file '${files.at(-1)}'`].join("\n") + "\n");

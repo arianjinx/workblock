@@ -51,7 +51,6 @@ chrome() {
     sudo env "PATH=$PATH" npx -y @puppeteer/browsers@3.2.4 install chrome@stable --path "$browsers" --install-deps >/dev/null
   fi
   "$path" --version
-  # Ubuntu 24.04's AppArmor blocks the user namespaces Chrome's sandbox needs ("No usable sandbox!"). CI lifts it too.
   local userns=/proc/sys/kernel/apparmor_restrict_unprivileged_userns
   if [ "$(cat "$userns" 2>/dev/null)" = 1 ] && can_sudo; then
     sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

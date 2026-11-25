@@ -11,9 +11,9 @@ export const DEFAULTS = {
 		"linkedin.com",
 		"news.ycombinator.com",
 	],
-	startHour: 9, // inclusive
-	endHour: 17, // exclusive: 16:59 blocked, 17:00 free
-	days: [1, 2, 3, 4, 5], // Date#getDay, 0=Sun .. 6=Sat
+	startHour: 9,
+	endHour: 17,
+	days: [1, 2, 3, 4, 5],
 };
 
 export const isValidWindow = (cfg) => cfg.startHour < cfg.endHour;
@@ -24,9 +24,6 @@ export function isWorkHours(cfg, now) {
 	return h >= cfg.startHour && h < cfg.endHour;
 }
 
-// Saved lists may hold capitals from before parseSites lowercased them, so match lowercase.
-// requestDomains matches the domain AND its subdomains, so "x.com" already
-// covers www.x.com and mobile.x.com. No www. variants needed.
 export function buildRules(sites) {
 	return sites.map((site, i) => ({
 		id: i + 1,
@@ -56,8 +53,6 @@ export function parseSites(text) {
 		.filter((line) => line && !line.startsWith("#"));
 }
 
-// The blocked page carries the URL it replaced. Brave's saved tab groups keep
-// only a tab's current URL, so without this the original link is gone for good.
 export function blockedPageUrl(page, url) {
 	return `${page}?url=${encodeURIComponent(url)}`;
 }

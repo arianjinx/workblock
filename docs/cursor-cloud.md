@@ -13,11 +13,12 @@ From the repo root:
 
 ```sh
 bash .agents/setup
-node test.mjs && node prune.test.mjs
+scripts/verify.sh
 ```
 
-`node test.mjs && node prune.test.mjs` is the verify command. `npm test` runs
-that same pair. There is no build. The other commands are in
+`scripts/verify.sh` is the verify command. It runs `scripts/rules.mjs`, then
+`npm test`, which is `node prune.test.mjs`. `scripts/score` checks
+`schedule.js`. There is no build. The other commands are in
 [AGENTS.md](../AGENTS.md).
 
 `npm test` reads no secrets. The browser check reads none either. With no
