@@ -1,6 +1,5 @@
 # Workblock
 
-[![CI](https://github.com/arianjinx/workblock/actions/workflows/ci.yml/badge.svg)](https://github.com/arianjinx/workblock/actions/workflows/ci.yml)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-4285F4)](manifest.json)
 [![No dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -157,7 +156,6 @@ on the Workblock card in `brave://extensions`.
 | `e2e.mjs` | End-to-end checks in a real browser. |
 | `demo.mjs` | Records `docs/demo-light.gif` and `docs/demo-dark.gif` in a real browser. |
 | `cdp.mjs` | Starts a browser with the extension loaded and talks to it over the Chrome DevTools Protocol. `e2e.mjs` and `demo.mjs` both use it. |
-| `.github/workflows/ci.yml` | The CI workflow. |
 | `ship.mjs`, `prune.mjs` | The `npm run ship` and `npm run prune` commands. `prune.test.mjs` checks which worktrees and branches `prune` removes. |
 
 Run the checks:
@@ -178,13 +176,8 @@ After you change `options.html` or the blocked page, run `npm run demo` and
 commit the new GIFs and screenshots. The script needs `ffmpeg`, ImageMagick,
 and network access, because the demo loads the Hacker News guidelines page.
 `docs/screenshots/` holds the light frames at 1280x800, the size the Chrome
-Web Store asks for.
-
-CI runs `npm test` and `npm run e2e` on every push to `main` and every pull
-request. The e2e job uses the current stable Chrome for Testing, because
-branded Chrome 137 and later ignores `--load-extension`. CI also runs every
-week with no code change, so the badge turns red when a new Chrome release
-breaks the extension.
+Web Store asks for. `npm run e2e` uses Chrome for Testing, because branded
+Chrome 137 and later ignores `--load-extension`.
 
 To merge a branch into `main`, commit your work and run `npm run ship` from the
 branch. It merges `origin/main` into the branch, runs `npm test`, pushes, opens

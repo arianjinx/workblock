@@ -1,6 +1,6 @@
 # Goal: every blocking promise in the README and AGENTS.md is proven by a check, and the popup and blocked page meet the contrast and tap-target rules
 
-Workblock climbs a ladder. Each rung has a number that only goes up, printed by `scripts/score`. A rung counts only when `scripts/verify.sh` passes on the same commit. The reference is this repo's own spec: the README and AGENTS.md already say what a block does, and Chrome for Testing already runs the end-to-end script in CI.
+Workblock climbs a ladder. Each rung has a number that only goes up, printed by `scripts/score`. A rung counts only when `scripts/verify.sh` passes on the same commit. The reference is this repo's own spec: the README and AGENTS.md already say what a block does, and Chrome for Testing runs the end-to-end script when `SCORE_E2E=1`.
 
 | Rung | Name | Score (higher is better) | Frontier |
 |---|---|---|---|
@@ -18,7 +18,7 @@ There is no speed rung. The one-minute alarm is a limit the README states, not a
 ## Why each frontier can be reached
 
 - **R1.** `schedule.js` imports no browser APIs, so each check is an input and the answer the README already gives. A pasted URL is supposed to keep only the domain. A port, a query with no slash, a hash with no slash, and a user name still ride along in the string `parseSites` keeps. The permissions table already names every permission in `manifest.json`.
-- **R2 and R3.** `e2e.mjs` already walks the promises it names: a swept tab, the return, a background tab, a legacy page, a new visit, capitals, and overlapping writes. CI runs that script on Chrome for Testing. Each missing promise is the same kind of check.
+- **R2 and R3.** `e2e.mjs` already walks the promises it names: a swept tab, the return, a background tab, a legacy page, a new visit, capitals, and overlapping writes. `SCORE_E2E=1 scripts/score` runs that script on Chrome for Testing. Each missing promise is the same kind of check.
 - **R4.** The blocked page stores its colors as hex tokens. The light link and the remaining time use `--ink-soft` on `--paper`, and that pair is under 4.5:1. The other five pairs already clear it. The Save button and the hour fields are short because the body font is 13px and the padding is 7px and 5px. 4.5:1 is WCAG 2.2 AA for text this size. 44px is the tap-target rule on the UI ladder (WCAG 2.5.5).
 - **R5.** `npm run demo` already records the GIFs and the screenshots. A person looks at them.
 
