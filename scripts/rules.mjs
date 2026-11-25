@@ -92,14 +92,13 @@ const ALLOWED_MARKDOWN = new Set([
 	"LOOP.md",
 	"FRONTIER.md",
 	"docs/DEVIATIONS.md",
-	"docs/cursor-cloud.md",
 ]);
 const BANNED_PATH = [
 	[/^docs\/.*\.md$/, "no docs; the commit message is the record"],
 	[/(^|\/)CLAUDE\.md$/, "no CLAUDE.md; AGENTS.md is the one instruction file"],
 	[/(^|\/)SKILL\.md$/, "no skills; scripts/verify.sh is the gate"],
 	[/^\.agents\/skills\//, "no skills; scripts/verify.sh is the gate"],
-	[/^\.claude\/skills$/, "no skills; scripts/verify.sh is the gate"],
+	[/^\.claude\/skills\//, "no skills; scripts/verify.sh is the gate"],
 	[/^\.cursor\/skills\//, "no skills; scripts/verify.sh is the gate"],
 	[/(^|\/)DESIGN\.md$/, "no DESIGN.md; the commit message is the record"],
 ];

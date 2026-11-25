@@ -33,7 +33,3 @@ SCORE_E2E=1 scripts/score  # R3, Chrome for Testing, one at a time, port 9333
 ## Secrets
 
 `npm run prune` and `npm run ship` read `GH_TOKEN`. Never print it. Cloud agents do not run `ship`.
-
-## Cursor Cloud specific instructions
-
-When you run as a Cursor cloud agent, read `docs/cursor-cloud.md` first. It holds the install command, the verify command and the secrets notes.

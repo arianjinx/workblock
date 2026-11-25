@@ -38,5 +38,5 @@ Give each agent one group, and never two agents one group. The repo is flat, so 
 - Work in your own git worktree. Rebase before every push. On a conflict in someone else's change, keep theirs and redo yours on top.
 - Keep slices small and push often. Unpushed work is lost when an agent dies.
 - Run `SCORE_E2E=1` one at a time. `e2e.mjs` and `demo.mjs` both listen on port 9333.
-- The browser check needs Chrome for Testing, as `docs/cursor-cloud.md` describes. Branded Chrome 137 and later ignores `--load-extension`.
+- The browser check needs Chrome for Testing, which `.agents/setup` installs. Branded Chrome 137 and later ignores `--load-extension`.
 - End every session with nothing unpushed.
