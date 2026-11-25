@@ -63,6 +63,20 @@ Bots gather context. Cloud agents code on a branch under this repo's Cursor Proj
 
 When the same correction happens twice, turn it into a lint, a type, a test, or a rule. Prefer structure over prose, and record it in this file next to what enforces it. There is no linter and no typechecker in this repo, so a repeated correction lands as a test in `test.mjs`, or as a sentence here when it is a judgment call.
 
+## Hill climb
+
+Many agents work on this at once. Every rule here keeps main green.
+
+- Follow LOOP.md. The score in GOAL.md is the only measure of progress, and FRONTIER.jsonl is the record.
+- Own one file group from LOOP.md. Never edit a group another agent owns; ask the lead instead.
+- Never silence a check or weaken a test to get green. Fix the code, not the check.
+- Do not run `npm run ship`. A person merges.
+- Work in your own worktree. End every slice with `git pull --rebase && scripts/verify.sh && git push`.
+- Keep slices small and push often. End every session with nothing unpushed.
+- The commit message is the record: `type(scope): summary`, then why, with the commands and the numbers.
+- Tests compare against the reference or real inputs. Don't add a test that only restates the code.
+- Speed claims need the interleaved measurement in FRONTIER.md. This ladder has no speed rung.
+
 ## Cursor Cloud specific instructions
 
 When you run as a Cursor cloud agent, read `docs/cursor-cloud.md` first. It
