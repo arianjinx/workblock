@@ -76,8 +76,32 @@ function kind(file, text) {
 	return "";
 }
 
+const ALLOWED_MARKDOWN = new Set([
+	"AGENTS.md",
+	"README.md",
+	"GOAL.md",
+	"LOOP.md",
+	"FRONTIER.md",
+	"docs/DEVIATIONS.md",
+	"docs/cursor-cloud.md",
+]);
+const BANNED_PATH = [
+	[/^docs\/.*\.md$/, "no docs; the commit message is the record"],
+	[/(^|\/)CLAUDE\.md$/, "no CLAUDE.md; AGENTS.md is the one instruction file"],
+	[/(^|\/)SKILL\.md$/, "no skills; scripts/verify.sh is the gate"],
+	[/^\.agents\/skills\//, "no skills; scripts/verify.sh is the gate"],
+	[/^\.claude\/skills$/, "no skills; scripts/verify.sh is the gate"],
+	[/^\.cursor\/skills\//, "no skills; scripts/verify.sh is the gate"],
+	[/(^|\/)DESIGN\.md$/, "no DESIGN.md; the commit message is the record"],
+];
+
 const broken = [];
 for (const file of files) {
+	for (const [pattern, why] of BANNED_PATH) {
+		if (pattern.test(file) && !ALLOWED_MARKDOWN.has(file)) broken.push(`${file}: ${why}`);
+	}
+	if (file.endsWith(".md") && !ALLOWED_MARKDOWN.has(file)) broken.push(`${file}: no docs; the commit message is the record`);
+
 	if (file.startsWith(".github/")) continue;
 	const path = join(root, file);
 	if (!statSync(path).isFile()) continue;
