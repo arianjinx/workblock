@@ -4,11 +4,11 @@ The current score for each rung, then the evidence for every step, newest first.
 
 | Rung | Name | Score | Frontier | Commit |
 |---|---|---|---|---|
-| R0 | Gate | yes | yes | aaaaaaa |
-| R1 | Schedule | 61/65 | every check | aaaaaaa |
-| R2 | Flows | 11/23 | every promise | aaaaaaa |
-| R3 | Device | 11/23, e2e passed | every promise | aaaaaaa |
-| R4 | UI rules | 5/8 | every check | aaaaaaa |
+| R0 | Gate | yes | yes | b6680e0 |
+| R1 | Schedule | 63/67 | 67/67 | b6680e0 |
+| R2 | Flows | 11/23 | 23/23 | b6680e0 |
+| R3 | Device | 11/23, e2e passed | 23/23, e2e passes | b6680e0 |
+| R4 | UI rules | 5/8 | 8/8 | b6680e0 |
 | R5 | Taste | manual | the owner's yes | — |
 
 ## Speed
@@ -16,6 +16,16 @@ The current score for each rung, then the evidence for every step, newest first.
 There is no speed rung. The README's one-minute alarm is a limit, not a target. If a speed rung is added later, a number counts only when the baseline and the candidate run interleaved, at least 6 pairs, on an idle machine, and the whole paired 95% interval is a gain.
 
 ## Evidence
+
+### 2026-11-25 re-baseline after the frontier review
+
+The baseline below names commit `aaaaaaa`, which is not a commit. This run re-measures every rung on a real one. The numbers match it, except R1, which gained two checks.
+
+- Command: `SCORE_E2E=1 scripts/score`. Machine: `Peyeks-MacBook-Pro.local`, macOS. Commit: `b6680e0`, clean tree. About 14 seconds; without `SCORE_E2E=1`, about 2.
+- Result: R0 yes, R1 63/67, R2 11/23, R3 11/23 with e2e passing, R4 5/8, R5 manual.
+- R1 gained `defaults-sites` and `defaults-window`. They check the README's defaults sentence against `DEFAULTS` in `schedule.js`, and both pass. The same four `parse-` checks fail. `new URL(...).hostname` in Node answers each of them with the domain the README wants.
+- R3 ran on Chrome for Testing 159.0.8154.6, from the Playwright cache, with port 9333 held by an unrelated headless Chrome. The meter picked a free port. Before `cdp.mjs` passed `--disable-backgrounding-occluded-windows`, the e2e failed 3 of 3 times on macOS at "background tab to return when viewed": Chrome hides an occluded window, and `blocked.js` returns only from a visible page. The meter read that as 4/23, with `first_fail` `background-waits: e2e did not reach it; Error: timed out waiting for background tab to return when viewed`. With the flag, all 7 flows pass. The "waits until it is viewed" assert still holds, because an inactive tab stays hidden.
+- Still not measured, and not in a total: the same R4 list as below, and R5.
 
 ### 2026-11-25 baseline
 
