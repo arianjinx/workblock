@@ -302,9 +302,9 @@ function findChrome(dir) {
 
 function device(source, dropped) {
 	const how = "SCORE_E2E=1 scripts/score (Chrome for Testing, xvfb when DISPLAY is unset; one run at a time, port 9333)";
-	if (!on("SCORE_E2E")) return { score: "unmeasured", how };
+	if (!on("SCORE_E2E")) return { score: "unmeasured", how, first_fail: "" };
 	const chrome = process.env.SCORE_CHROME || findChrome(join(homedir(), ".cache/workblock/browsers"));
-	if (!chrome) return { score: "unmeasured", how: `${how}. Chrome for Testing was not under ~/.cache/workblock/browsers` };
+	if (!chrome) return { score: "unmeasured", how: `${how}. Chrome for Testing was not under ~/.cache/workblock/browsers`, first_fail: "" };
 	const xvfb = !process.env.DISPLAY;
 	const run = xvfb
 		? spawnSync("xvfb-run", ["-a", "npm", "run", "e2e", "--", chrome], { cwd: root, encoding: "utf8", timeout: 180000 })
@@ -534,9 +534,9 @@ function uiChecks() {
 }
 
 function gate() {
-	if (args.has("--no-gate")) return { score: "skipped" };
+	if (args.has("--no-gate")) return { score: "skipped", first_fail: "" };
 	const run = spawnSync(join(root, "scripts/verify.sh"), { cwd: root, encoding: "utf8" });
-	if (run.status === 0) return { score: "yes" };
+	if (run.status === 0) return { score: "yes", first_fail: "" };
 	const tail = `${run.stdout ?? ""}\n${run.stderr ?? ""}`.trim().split("\n").filter(Boolean).at(-1) ?? run.error?.message ?? "";
 	return { score: "no", first_fail: tail.slice(0, 300) };
 }
@@ -568,6 +568,10 @@ console.log(
 		R2: summarize(coverage),
 		R3: device(e2eSource, dropped),
 		R4: r4,
-		R5: { score: "manual", how: "the owner signs off on docs/screenshots and docs/demo-light.gif and docs/demo-dark.gif" },
+		R5: {
+			score: "manual",
+			how: "the owner signs off on docs/screenshots and docs/demo-light.gif and docs/demo-dark.gif",
+			first_fail: "",
+		},
 	}),
 );
