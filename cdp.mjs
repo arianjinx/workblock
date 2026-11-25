@@ -62,10 +62,6 @@ export function connect(wsUrl) {
 	return opened.promise;
 }
 
-// Chrome ships component extensions ("Contextual Tasks") whose worker is also a
-// background.js, and a worker is listed before its script has run, so each
-// candidate is asked for its manifest name until one answers "Workblock" with
-// storage ready.
 export async function connectWorker() {
 	return waitFor("the Workblock service worker", async () => {
 		for (const t of await targets()) {

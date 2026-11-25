@@ -393,8 +393,6 @@ function linePx(block, bodyBlock) {
 	return line < 4 ? size * line : line;
 }
 
-// Border-box height from the authored font, padding, and border. The day
-// toggles are built in options.js, so they are not in this height.
 function borderBoxHeight(block, bodyBlock) {
 	if (!block) return null;
 	const sizing = decl(block, "box-sizing") ?? "content-box";
