@@ -104,7 +104,7 @@ const BANNED_PATH = [
 ];
 
 const KEPT_TEST = new Set(["prune.test.mjs"]);
-const UNIT_TEST = /(?:^|\/)test\.mjs$|\.(?:test|spec)\.[cm]?js$/;
+const UNIT_TEST = /(?:^|\/)test\.[cm]?[jt]sx?$|\.(?:test|spec)\.[cm]?[jt]sx?$|(?:^|\/)test_.+\.py$|_test\.py$/;
 
 const broken = [];
 for (const file of files) {
