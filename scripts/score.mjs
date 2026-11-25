@@ -134,6 +134,15 @@ function permissionChecks() {
 	const checks = [];
 	const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8")).permissions;
 	const readme = readFileSync(join(root, "README.md"), "utf8");
+	const defaultsSentence = readme.split("The defaults are")[1]?.split("The badge reads")[0] ?? "";
+	const readmeDefaults = [...defaultsSentence.matchAll(/`([^`]+)`/g)].map((match) => match[1]);
+	eq(checks, "defaults-sites", DEFAULTS.sites, readmeDefaults);
+	eq(
+		checks,
+		"defaults-window",
+		{ startHour: DEFAULTS.startHour, endHour: DEFAULTS.endHour, days: DEFAULTS.days },
+		{ startHour: 9, endHour: 17, days: [1, 2, 3, 4, 5] },
+	);
 	const section = readme.split("### Why each permission")[1]?.split(/\n## /)[0] ?? "";
 	const listed = [...section.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
 	for (const perm of manifest) {
@@ -289,26 +298,48 @@ function flowChecks(source) {
 	});
 }
 
+const CHROME_BINARIES = new Set(["chrome", "Google Chrome for Testing"]);
+const CHROME_HOMES = [
+	join(homedir(), ".cache/workblock/browsers"),
+	join(homedir(), "Library/Caches/ms-playwright"),
+	join(homedir(), ".cache/ms-playwright"),
+];
+
 function findChrome(dir) {
 	if (!existsSync(dir)) return "";
 	const found = [];
 	for (const entry of readdirSync(dir, { withFileTypes: true })) {
 		const path = join(dir, entry.name);
-		if (entry.isDirectory()) found.push(findChrome(path));
-		else if (entry.name === "chrome") found.push(path);
+		if (entry.isDirectory() && entry.name === "Google Chrome for Testing.app") {
+			const binary = join(path, "Contents/MacOS/Google Chrome for Testing");
+			if (existsSync(binary)) found.push(binary);
+		} else if (entry.isDirectory()) found.push(findChrome(path));
+		else if (CHROME_BINARIES.has(entry.name)) found.push(path);
 	}
 	return found.filter(Boolean).sort().at(-1) ?? "";
 }
 
+function freePort() {
+	const probe = spawnSync(
+		process.execPath,
+		["-e", 'const s = require("node:net").createServer().listen(0, "127.0.0.1", () => { console.log(s.address().port); s.close(); })'],
+		{ encoding: "utf8" },
+	);
+	return probe.stdout.trim();
+}
+
 function device(source, dropped) {
-	const how = "SCORE_E2E=1 scripts/score (Chrome for Testing, xvfb when DISPLAY is unset; one run at a time, port 9333)";
+	const how = "SCORE_E2E=1 scripts/score (Chrome for Testing; xvfb-run on Linux when DISPLAY is unset; the meter picks a free CDP port)";
 	if (!on("SCORE_E2E")) return { score: "unmeasured", how, first_fail: "" };
-	const chrome = process.env.SCORE_CHROME || findChrome(join(homedir(), ".cache/workblock/browsers"));
-	if (!chrome) return { score: "unmeasured", how: `${how}. Chrome for Testing was not under ~/.cache/workblock/browsers`, first_fail: "" };
-	const xvfb = !process.env.DISPLAY;
+	const chrome = process.env.SCORE_CHROME || CHROME_HOMES.map(findChrome).find(Boolean) || "";
+	if (!chrome) return { score: "unmeasured", how: `${how}. No Chrome for Testing under ${CHROME_HOMES.join(", ")}; set SCORE_CHROME`, first_fail: "" };
+	const port = process.env.WORKBLOCK_CDP_PORT || freePort();
+	const env = { ...process.env, WORKBLOCK_CDP_PORT: port };
+	const options = { cwd: root, encoding: "utf8", timeout: 180000, env };
+	const xvfb = process.platform === "linux" && !process.env.DISPLAY;
 	const run = xvfb
-		? spawnSync("xvfb-run", ["-a", "npm", "run", "e2e", "--", chrome], { cwd: root, encoding: "utf8", timeout: 180000 })
-		: spawnSync("npm", ["run", "e2e", "--", chrome], { cwd: root, encoding: "utf8", timeout: 180000 });
+		? spawnSync("xvfb-run", ["-a", "npm", "run", "e2e", "--", chrome], options)
+		: spawnSync("npm", ["run", "e2e", "--", chrome], options);
 	if (run.error) return { score: "error", first_fail: run.error.message, how };
 	const text = `${run.stdout}\n${run.stderr}`;
 	const exitOk = run.status === 0;
@@ -322,13 +353,15 @@ function device(source, dropped) {
 		else if (!covered) fails.push(`${flow.id}: e2e.mjs does not mention "${flow.needle}"`);
 		else fails.push(`${flow.id}: e2e did not reach it`);
 	}
-	const tail = text.trim().split("\n").filter(Boolean).at(-1) ?? "";
+	const lines = text.trim().split("\n").filter(Boolean);
+	const tail = lines.find((line) => /^\w*Error\b/.test(line.trim())) ?? lines.at(-1) ?? "";
 	const body = {
 		pass,
 		total: live.length,
 		e2e: exitOk ? "pass" : "fail",
 		chrome,
-		first_fail: fails[0] ?? (exitOk ? "" : tail.slice(0, 300)),
+		port: Number(port),
+		first_fail: exitOk ? (fails[0] ?? "") : [fails[0], tail.slice(0, 300)].filter(Boolean).join("; "),
 	};
 	if (!exitOk) body.tail = tail.slice(0, 300);
 	if (args.has("--all")) body.fails = fails;

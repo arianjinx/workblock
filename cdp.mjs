@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const DEFAULT_BROWSER = "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser";
-const PORT = 9333;
+const PORT = Number(process.env.WORKBLOCK_CDP_PORT) || 9333;
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -91,6 +91,7 @@ export async function launch(browserPath = DEFAULT_BROWSER) {
 		`--load-extension=${import.meta.dirname}`,
 		`--disable-extensions-except=${import.meta.dirname}`,
 		"--no-first-run",
+		"--disable-backgrounding-occluded-windows",
 		"--no-default-browser-check",
 		"about:blank",
 	]);

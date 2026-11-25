@@ -63,7 +63,7 @@ SCORE_E2E=1 scripts/score
 npm run demo
 ```
 
-`npm run e2e` needs Node 22 or later and Chrome for Testing. `npm run prune`
+`npm run e2e` needs Node 22 or later and Chrome for Testing. It and `npm run demo` drive the browser on port 9333; set `WORKBLOCK_CDP_PORT` to use another. `npm run prune`
 and `npm run ship` read `GH_TOKEN`. Cloud agents do not run `ship`.
 
 ## License
