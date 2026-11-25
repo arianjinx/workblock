@@ -95,8 +95,14 @@ const BANNED_PATH = [
 	[/(^|\/)DESIGN\.md$/, "no DESIGN.md; the commit message is the record"],
 ];
 
+const KEPT_TEST = new Set(["prune.test.mjs"]);
+const UNIT_TEST = /(?:^|\/)test\.mjs$|\.(?:test|spec)\.[cm]?js$/;
+
 const broken = [];
 for (const file of files) {
+	if (UNIT_TEST.test(file) && !KEPT_TEST.has(file)) {
+		broken.push(`${file}: a unit test; scripts/score checks schedule.js, and e2e.mjs checks the browser`);
+	}
 	for (const [pattern, why] of BANNED_PATH) {
 		if (pattern.test(file) && !ALLOWED_MARKDOWN.has(file)) broken.push(`${file}: ${why}`);
 	}
