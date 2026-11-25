@@ -72,7 +72,16 @@ function shellComment(line, index) {
 
 function kind(file, text) {
 	if (/\.(mjs|js|html|css)$/.test(file)) return "code";
-	if (file.endsWith(".sh") || text.startsWith("#!")) return "shell";
+	if (
+		file.endsWith(".sh") ||
+		file.endsWith(".yml") ||
+		file.endsWith(".yaml") ||
+		file.endsWith(".toml") ||
+		file === ".npmrc" ||
+		text.startsWith("#!")
+	) {
+		return "shell";
+	}
 	return "";
 }
 
@@ -108,7 +117,6 @@ for (const file of files) {
 	}
 	if (file.endsWith(".md") && !ALLOWED_MARKDOWN.has(file)) broken.push(`${file}: no docs; the commit message is the record`);
 
-	if (file.startsWith(".github/")) continue;
 	const path = join(root, file);
 	if (!statSync(path).isFile()) continue;
 	const text = readFileSync(path, "utf8");
