@@ -4,7 +4,7 @@ Workblock climbs a ladder. Each rung has a number that only goes up, printed by 
 
 | Rung | Name | Score (higher is better) | Frontier |
 |---|---|---|---|
-| R0 | Gate | `scripts/verify.sh` passes. That is `npm test`: `node test.mjs` and `node prune.test.mjs` | yes |
+| R0 | Gate | `scripts/verify.sh` passes. That is `scripts/rules.mjs`, then `npm test` (`node prune.test.mjs`) | yes |
 | R1 | Schedule | spec checks on `schedule.js`, and the README permissions table against `manifest.json`, that come out as the spec says | every check |
 | R2 | Flows | browser promises whose phrase appears in `e2e.mjs` | every promise |
 | R3 | Device | those promises that pass under Chrome for Testing. Run with `SCORE_E2E=1 scripts/score` | every promise |

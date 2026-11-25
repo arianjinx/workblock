@@ -6,7 +6,7 @@ Repeat until every rung in GOAL.md is at its frontier.
 2. **Pick the lowest rung below its frontier that your files can move.** Work on the `first_fail` the score names. Skip anything FRONTIER.jsonl already rejected, unless you have a new reason. An unmeasured rung is not at its frontier.
 3. **Find the cause, not the symptom.** For R1, run that input through `schedule.js` and read the README sentence it comes from. For R2 and R3, read the promise in `scripts/score.mjs` and the file that should make it true. For R4, read the token or the rule the check names. Do not guess.
 4. **Prove it with a check that fails before and passes after.**
-   - R1: put the failing input in `test.mjs` and assert the README's answer. Leave the vector in `scripts/score.mjs` as it is. Do not change what a vector expects. A wrong expectation is a question for the owner, and then an entry in `docs/DEVIATIONS.md`.
+   - R1: change `schedule.js` until the vector in `scripts/score.mjs` passes. Do not add a unit test, and do not change what a vector expects. A wrong expectation is a question for the owner, and then an entry in `docs/DEVIATIONS.md`.
    - R2: an assertion in `e2e.mjs` whose message contains the flow's phrase. Adding the phrase without the behavior is cheating the score.
    - R3: `SCORE_E2E=1 scripts/score` goes up, and no other rung goes down.
    - R4: the failing check passes. Contrast is at least 4.5:1. The Save button and the hour fields are at least 44px tall.
@@ -24,7 +24,7 @@ Give each agent one group, and never two agents one group. The repo is flat, so 
 
 | Files | Rungs it moves |
 |---|---|
-| `schedule.js`, `test.mjs` | R1 |
+| `schedule.js` | R1 |
 | `background.js` | the block, the badge, the purge, cookies, subdomains, a site that is not listed |
 | `blocked.html`, `blocked.js` | the blocked page, and R4 contrast |
 | `options.html`, `options.js` | the popup, and R4 tap targets |
