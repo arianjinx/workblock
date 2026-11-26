@@ -1,0 +1,18 @@
+---
+description: pstack per-role model choices (overrides skill defaults)
+alwaysApply: true
+---
+# pstack model configuration. One line per role. Delete a line to fall back to the skill default.
+# `inherit-parent` or `auto` as a value: the role runs on the parent chat model (omit Task `model` and spawn `generalPurpose`). Alias entries in a panel list still count toward its fan-out.
+# defaults: 3
+# budget: large (xhigh)
+# No Claude models in any role (owner choice). Grok runs at high-fast by owner choice; Gemini 4 Neon keeps its xhigh seat.
+feature, refactoring: grok-4.7-high-fast
+bug-fix: grok-4.7-high-fast
+perf-issue: grok-4.7-high-fast
+hillclimb: grok-4.7-high-fast
+judgment and prose: gemini-4-neon-xhigh
+arena runners: grok-4.7-high-fast, gemini-4-neon-xhigh
+arena cross-judge pool: gemini-4-neon-xhigh, grok-4.7-high-fast
+swarm workers: grok-4.7-high-fast
+interrogate reviewers: grok-4.7-high-fast, gemini-4-neon-xhigh

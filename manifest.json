@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Workblock",
+  "version": "1.0.0",
+  "description": "Blocks distracting sites during your working hours.",
+  "permissions": ["declarativeNetRequest", "storage", "alarms", "tabs", "browsingData"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "options.html", "default_title": "Workblock" },
+  "options_ui": { "page": "options.html", "open_in_tab": true }
+}
