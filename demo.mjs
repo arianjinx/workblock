@@ -71,9 +71,8 @@ const SCENES = [
 		caption: "The block ends, and the tab goes back by itself",
 		hold: 3.5,
 		async run(s) {
-			await s.setCfg(OFF);
-			await waitFor("the block rules to clear", async () => (await s.ruleCount()) === 0);
 			await s.reading.page.send("Page.bringToFront");
+			await s.setCfg(OFF);
 			await s.reading.until("the tab to return", `location.href === ${JSON.stringify(READING)} && document.readyState === "complete"`);
 			return s.reading.shoot();
 		},
@@ -179,7 +178,6 @@ async function record(theme, frames) {
 		const s = {
 			extBase,
 			setCfg: (cfg) => ext.evaluate(`chrome.storage.sync.set(${JSON.stringify(cfg)})`),
-			ruleCount: () => ext.evaluate(`chrome.declarativeNetRequest.getDynamicRules().then(r => r.length)`),
 			open,
 		};
 		const stage = await open("about:blank");

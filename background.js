@@ -21,7 +21,7 @@ async function evictBlockedSites(sites) {
 	await dropServiceWorkers(sites);
 }
 
-async function applySchedule() {
+async function applyScheduleNow() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const blocking = isWorkHours(cfg, new Date());
 	const old = await chrome.declarativeNetRequest.getDynamicRules();
@@ -36,7 +36,11 @@ async function applySchedule() {
 
 	chrome.action.setBadgeText({ text: blocking ? "ON" : "" });
 	chrome.action.setBadgeBackgroundColor({ color: "#c0392b" });
+	return { blocking, sites: cfg.sites };
 }
+
+let lastApply = Promise.resolve();
+const applySchedule = () => (lastApply = lastApply.then(applyScheduleNow, applyScheduleNow));
 
 chrome.runtime.onInstalled.addListener(() => {
 	chrome.alarms.create("tick", { periodInMinutes: 1 });
@@ -45,6 +49,11 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(applySchedule);
 chrome.alarms.onAlarm.addListener(applySchedule);
 chrome.storage.onChanged.addListener(applySchedule);
+chrome.runtime.onMessage.addListener((message, sender, reply) => {
+	if (message !== "apply-schedule") return false;
+	applySchedule().then(reply);
+	return true;
+});
 
 async function bounceBlockedVisit(tabId, { url }) {
 	if (!url) return;

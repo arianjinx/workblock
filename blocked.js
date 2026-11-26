@@ -24,17 +24,19 @@ function showReturnTime(cfg, now) {
 	$("left").textContent = `in ${h ? `${h} h ` : ""}${mins % 60} min`;
 }
 
-function returnLegacySweptTab() {
-	if (history.length > 1) history.back();
+const isFree = ({ blocking, sites }) => !blocking || (url !== null && !hostMatches(url, sites));
+
+function goBack() {
+	if (url) location.replace(url);
+	else if (history.length > 1) history.back();
 }
 
 async function returnVisibleTabIfFree() {
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
 	const now = new Date();
 	showReturnTime(cfg, now);
-	if (document.hidden) return;
-	if (url && !(isWorkHours(cfg, now) && hostMatches(url, cfg.sites))) location.replace(url);
-	if (!url && !isWorkHours(cfg, now)) returnLegacySweptTab();
+	if (document.hidden || !isFree({ blocking: isWorkHours(cfg, now), sites: cfg.sites })) return;
+	if (isFree(await chrome.runtime.sendMessage("apply-schedule"))) goBack();
 }
 
 returnVisibleTabIfFree();

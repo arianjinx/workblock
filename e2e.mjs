@@ -31,10 +31,11 @@ try {
 			.webSocketDebuggerUrl,
 	);
 	await waitFor("link to render", async () => (await page.evaluate(`document.querySelector("a")?.href`)) === ORIGINAL);
-	page.close();
 
 	await setCfg({ sites: [] });
 	await landsOn(tab, ORIGINAL, "tab to return once unblocked");
+	await waitFor("the returned tab to show the site, not the browser error", async () => (await page.evaluate("location.href")) === ORIGINAL, 5000);
+	page.close();
 	console.log("ok - swept tab returns once unblocked");
 
 	const reopened = await openTab(swept);
