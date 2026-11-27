@@ -10,6 +10,7 @@ Repeat until every rung in GOAL.md is at its frontier.
    - R2: an assertion in `e2e.mjs` whose message contains the flow's phrase. Adding the phrase without the behavior is cheating the score.
    - R3: `SCORE_E2E=1 scripts/score` goes up, and no other rung goes down.
    - R4: the failing check passes. Contrast is at least 4.5:1. The Save button and the hour fields are at least 44px tall.
+   - R6: the failing `safari-` check passes. Guard an API Safari lacks with `"<namespace>" in chrome`, and prove the guarded path in `e2e.mjs` by deleting that namespace.
 5. **Gate.** `scripts/verify.sh` passes. Never silence a check or weaken a test: change the code until it passes.
 6. **Prove it went up.** Score again. If any rung went down, revert.
 7. **Record and push.** Append one line to FRONTIER.jsonl and update the table in FRONTIER.md. Copy `commit` and `machine` from the score you ran. Never write a placeholder sha, and never record a `+dirty` score as accepted. Commit with `type(scope): summary`. Name the rung, the old score, the new score, and the cause. Then `git pull --rebase && scripts/verify.sh && git push` to main.
@@ -25,11 +26,11 @@ Give each agent one group, and never two agents one group. The repo is flat, so 
 | Files | Rungs it moves |
 |---|---|
 | `schedule.js` | R1 |
-| `background.js` | the block, the badge, the purge, cookies, subdomains, a site that is not listed |
+| `background.js` | the block, the badge, the purge, cookies, subdomains, a site that is not listed, and R6 guards |
 | `blocked.html`, `blocked.js` | the blocked page, and R4 contrast |
-| `options.html`, `options.js` | the popup, and R4 tap targets |
+| `options.html`, `options.js` | the popup, R4 tap targets, and R6 Safari host access |
 | `e2e.mjs`, `cdp.mjs` | R2 and R3. This group adds the flow. It asks the owner of a file before changing behavior there. |
-| `README.md`, `manifest.json`, `scripts/`, `.agents/` | the lead. The README is the spec and `scripts/` is the meter and the gate, so only the owner changes a promise or an expected value. |
+| `README.md`, `manifest.json`, `scripts/`, `.agents/` | the lead, and R6 manifest keys and the Safari snapshot `scripts/safari-compat.json`. The README is the spec and `scripts/` is the meter and the gate, so only the owner changes a promise or an expected value. |
 
 `scripts/score.mjs` is the meter. Nobody edits an expected value or a flow phrase to make a score go up. Everyone may append `FRONTIER.md` and `FRONTIER.jsonl`. On a conflict in `FRONTIER.jsonl`, keep both sides. `.gitattributes` marks that file `merge=union`.
 

@@ -12,6 +12,7 @@ import {
 	parseSites,
 	webReturnUrl,
 } from "../schedule.js";
+import * as scheduleModule from "../schedule.js";
 
 const root = join(import.meta.dirname, "..");
 const args = new Set(process.argv.slice(2));
@@ -566,6 +567,130 @@ function uiChecks() {
 	return { checks, unmeasured };
 }
 
+const newer = (a, b) => (a.localeCompare(b, "en", { numeric: true }) >= 0 ? a : b);
+
+function patternMatches(pattern, url) {
+	const [wantScheme, rest = ""] = pattern.split("://");
+	const slash = rest.indexOf("/");
+	const host = slash < 0 ? "" : rest.slice(0, slash);
+	if (!["*", "http", "https"].includes(wantScheme) || !host || rest.slice(slash) !== "/*") return false;
+	if (host !== "*" && host.slice(host.startsWith("*.") ? 2 : 0).includes("*")) return false;
+	let target;
+	try {
+		target = new URL(url);
+	} catch {
+		return false;
+	}
+	const scheme = target.protocol.slice(0, -1);
+	if (wantScheme === "*" ? !["http", "https"].includes(scheme) : wantScheme !== scheme) return false;
+	if (host === "*") return true;
+	if (host.startsWith("*.")) return target.hostname === host.slice(2) || target.hostname.endsWith(host.slice(1));
+	return target.hostname === host;
+}
+
+function safariChecks() {
+	const checks = [];
+	const unmeasured = ["the extension running in Safari on macOS, iOS and iPadOS: it needs a Mac with Xcode to wrap it in an app, so the owner runs it by hand"];
+	const snapshotFile = join(root, "scripts/safari-compat.json");
+	if (!existsSync(snapshotFile)) return { checks, unmeasured: [...unmeasured, "scripts/safari-compat.json is missing"] };
+	const { source, entries } = JSON.parse(readFileSync(snapshotFile, "utf8"));
+	const manifest = JSON.parse(readFileSync(join(root, "manifest.json"), "utf8"));
+	const scripts = readdirSync(root).filter((file) => file.endsWith(".js"));
+	const text = Object.fromEntries(scripts.map((file) => [file, readFileSync(join(root, file), "utf8")]));
+	const guarded = (name) => scripts.some((file) => text[file].includes(`"${name}" in chrome`));
+	let mac = "0";
+	let ios = "0";
+
+	const need = (id, key, what, guard) => {
+		const entry = entries[key];
+		if (!entry) {
+			unmeasured.push(`${id}: ${key} is not in ${source}`);
+			return;
+		}
+		const supported = entry.safari && entry.safari_ios;
+		if (supported) {
+			mac = newer(entry.safari, mac);
+			ios = newer(entry.safari_ios, ios);
+		}
+		const pass = Boolean(supported) || (guard !== undefined && guarded(guard));
+		const missing = [!entry.safari && "Safari", !entry.safari_ios && "Safari on iOS"].filter(Boolean).join(" and ");
+		checks.push({
+			id,
+			pass,
+			detail: pass ? "" : `${id}: ${missing} lack ${what}${guard ? `, and no script checks "${guard}" in chrome` : ""} (${key})`,
+		});
+	};
+
+	for (const [key, value] of Object.entries(manifest)) {
+		need(`safari-manifest-${key}`, `manifest.${key}`, `the manifest key ${key}`);
+		if (value && typeof value === "object" && !Array.isArray(value)) {
+			for (const sub of Object.keys(value)) {
+				if (entries[`manifest.${key}.${sub}`]) need(`safari-manifest-${key}.${sub}`, `manifest.${key}.${sub}`, `the manifest key ${key}.${sub}`);
+			}
+		}
+	}
+	for (const perm of manifest.permissions ?? []) need(`safari-perm-${perm}`, `manifest.permissions.${perm}`, `the ${perm} permission`, perm);
+
+	const apis = new Set();
+	for (const file of scripts) for (const match of text[file].matchAll(/chrome\.(\w+)\.(\w+)/g)) apis.add(`${match[1]}.${match[2]}`);
+	for (const api of [...apis].sort()) need(`safari-api-${api}`, `api.${api}`, `chrome.${api}`, api.split(".")[0]);
+
+	const rule = buildRules(["x.com"])[0];
+	for (const key of Object.keys(rule.condition)) {
+		const entryKey = `api.declarativeNetRequest.RuleCondition.${key}`;
+		if (entries[entryKey]) need(`safari-rule-${key}`, entryKey, `the rule condition ${key}`);
+	}
+	for (const type of rule.condition.resourceTypes ?? []) {
+		need(`safari-resource-${type}`, `api.declarativeNetRequest.ResourceType.${type}`, `the resource type ${type}`);
+	}
+
+	const readsTabUrls = scripts.some((file) => /chrome\.tabs\./.test(text[file]) && /\.url\b/.test(text[file]));
+	if (readsTabUrls && entries["api.tabs.Tab.url"]?.host_access) {
+		const declared = [...(manifest.host_permissions ?? []), ...(manifest.optional_host_permissions ?? [])];
+		const asks = scripts.some((file) => text[file].includes("chrome.permissions.request"));
+		const pass = declared.length > 0 && (asks || (manifest.host_permissions ?? []).length > 0);
+		checks.push({
+			id: "safari-host-access",
+			pass,
+			detail: pass ? "" : "safari-host-access: Safari leaves tab.url empty without host access, and the manifest declares none or no script asks for it (api.tabs.Tab.url)",
+		});
+	}
+
+	const sites = ["youtube.com", "x.com", "Example.com"];
+	const urls = [
+		"https://www.youtube.com/watch?v=abc",
+		"https://youtube.com/",
+		"https://notyoutube.com/",
+		"https://youtube.com.evil.test/",
+		"https://mobile.x.com/home",
+		"https://a.b.x.com/",
+		"http://x.com/a",
+		"https://www.example.com/",
+		"https://example.org/",
+	];
+	const origins = scheduleModule.siteOrigins?.(sites);
+	const wrong = origins ? urls.filter((url) => hostMatches(url, sites) !== origins.some((pattern) => patternMatches(pattern, url))) : urls;
+	checks.push({
+		id: "safari-origins",
+		pass: wrong.length === 0,
+		detail: !origins
+			? "safari-origins: schedule.js exports no siteOrigins, so Workblock cannot ask Safari for host access to the sites it blocks"
+			: wrong.length
+				? `safari-origins: the host access Workblock asks Safari for disagrees with what it blocks on ${wrong.join(", ")}`
+				: "",
+	});
+
+	const readme = readFileSync(join(root, "README.md"), "utf8");
+	for (const [id, phrase] of [
+		["safari-readme-mac", `Safari ${mac} or later`],
+		["safari-readme-ios", `iOS and iPadOS ${ios} or later`],
+	]) {
+		const pass = readme.includes(phrase);
+		checks.push({ id, pass, detail: pass ? "" : `${id}: README does not say "${phrase}", the oldest version every API Workblock uses needs` });
+	}
+	return { checks, unmeasured, min_safari: mac, min_ios: ios, source };
+}
+
 function gate() {
 	if (args.has("--no-gate")) return { score: "skipped", first_fail: "" };
 	const run = spawnSync(join(root, "scripts/verify.sh"), { cwd: root, encoding: "utf8" });
@@ -582,7 +707,9 @@ const allCoverage = flowChecks(e2eSource);
 const coverage = keep(allCoverage, dropped);
 const ui = uiChecks();
 const uiLive = ui.checks ? keep(ui.checks, dropped) : [];
-const known = new Set([...allSchedule, ...allCoverage, ...(ui.checks ?? []), ...flows].map((item) => item.id));
+const safari = safariChecks();
+const safariLive = keep(safari.checks, dropped);
+const known = new Set([...allSchedule, ...allCoverage, ...(ui.checks ?? []), ...safari.checks, ...flows].map((item) => item.id));
 const unknown = [...dropped].filter((id) => !known.has(id));
 
 const commitRun = spawnSync("git", ["rev-parse", "--short", "HEAD"], { cwd: root, encoding: "utf8" });
@@ -606,5 +733,11 @@ console.log(
 			how: "the owner signs off on docs/screenshots and docs/demo-light.gif and docs/demo-dark.gif",
 			first_fail: "",
 		},
+		R6: summarize(safariLive, {
+			min_safari: safari.min_safari,
+			min_ios: safari.min_ios,
+			source: safari.source,
+			unmeasured: safari.unmeasured,
+		}),
 	}),
 );

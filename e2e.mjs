@@ -90,6 +90,18 @@ try {
 	assert.deepEqual(ext.errors, [], "background script threw nothing");
 	console.log("ok - overlapping syncs leave one consistent rule set and no errors");
 
+	const safariUrl = "https://example.com/safari";
+	const safariTab = await openTab(safariUrl);
+	await setCfg({ days: [] });
+	await waitFor("rules cleared", async () => (await ruleCount()) === 0);
+	await landsOn(safariTab, safariUrl, "a tab to load before the browsingData-less block");
+	assert.equal(await ext.evaluate(`delete chrome.browsingData, "browsingData" in chrome`), false, "browsingData can be removed to mimic Safari");
+	await setCfg({ sites: ["example.com"], ...ALWAYS });
+	await waitFor("a browser without browsingData, like Safari, to show the badge", async () => (await ext.evaluate(`chrome.action.getBadgeText({})`)) === "ON", 5000);
+	await waitFor("a browser without browsingData, like Safari, to sweep the tab", async () => (await tabUrl(safariTab))?.startsWith(extBase), 5000);
+	assert.deepEqual(ext.errors, [], "a browser without browsingData, like Safari, blocks without throwing");
+	console.log("ok - a browser without browsingData, like Safari, still blocks, sweeps and shows the badge");
+
 	console.log("ok - e2e passed");
 } finally {
 	await close();

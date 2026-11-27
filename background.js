@@ -4,8 +4,10 @@ const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 
 const sendToBlockedPage = (tabId, url) => chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
 
+const canClearSiteData = () => "browsingData" in chrome;
+
 async function dropServiceWorkers(sites) {
-	if (!sites.length) return;
+	if (!sites.length || !canClearSiteData()) return;
 	const origins = sites.flatMap((s) => [`https://${s}`, `https://www.${s}`]);
 	await chrome.browsingData.remove({ origins }, { serviceWorkers: true, cacheStorage: true });
 }
@@ -49,6 +51,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onStartup.addListener(applySchedule);
 chrome.alarms.onAlarm.addListener(applySchedule);
 chrome.storage.onChanged.addListener(applySchedule);
+chrome.permissions.onAdded.addListener(applySchedule);
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
 	if (message !== "apply-schedule") return false;
 	applySchedule().then(reply);

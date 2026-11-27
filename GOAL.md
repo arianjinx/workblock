@@ -1,4 +1,4 @@
-# Goal: every blocking promise in the README and AGENTS.md is proven by a check, and the popup and blocked page meet the contrast and tap-target rules
+# Goal: every blocking promise in the README and AGENTS.md is proven by a check, the popup and blocked page meet the contrast and tap-target rules, and every API Workblock uses works in Safari on macOS, iOS and iPadOS
 
 Workblock climbs a ladder. Each rung has a number that only goes up, printed by `scripts/score`. A rung counts only when `scripts/verify.sh` passes on the same commit. The reference is this repo's own spec: the README and AGENTS.md already say what a block does, and Chrome for Testing runs the end-to-end script when `SCORE_E2E=1`.
 
@@ -10,12 +10,13 @@ Workblock climbs a ladder. Each rung has a number that only goes up, printed by 
 | R3 | Device | those promises that pass under Chrome for Testing. Run with `SCORE_E2E=1 scripts/score` | 23/23, e2e passes |
 | R4 | UI rules | blocked-page color pairs at 4.5:1 or better, in light and dark, and the Save button and the hour fields at least 44px tall | 8/8 |
 | R5 | Taste | the owner signs off on `docs/screenshots/` and `docs/demo-light.gif` and `docs/demo-dark.gif` | the owner's yes |
+| R6 | Safari | checks that every manifest key, permission, `chrome.*` call and rule field Workblock uses is in Safari and Safari on iOS, per MDN's data in `scripts/safari-compat.json`, or that the code checks for it first; that Safari gets the host access it needs to read a tab's address; and that the README names the oldest Safari those need | 46/46 |
 
-Climb in order: R0, R1, R2, R3, R4, then R5. A rung above an unmet one does not count. R3 is unmeasured until `SCORE_E2E=1`, and an unmeasured rung is not at its frontier. R5 is a person. Agents stop there and hand the screenshots over.
+Climb in order: R0, R1, R2, R3, R4, then R5. A rung above an unmet one does not count. R6 is the exception: it needs only R0, so it climbs beside the others and does not wait on R5. R3 is unmeasured until `SCORE_E2E=1`, and an unmeasured rung is not at its frontier. R5 is a person. Agents stop there and hand the screenshots over.
 
 There is no speed rung. The one-minute alarm is a limit the README states, not a number to chase.
 
-R0, R1, R2 and R4 run on every `scripts/score`, in about 2 seconds, offline. R3 needs Chrome for Testing and takes about 15 seconds, so it runs only with `SCORE_E2E=1`. R5 is a person. The totals grow when a check or a promise is added to `scripts/score.mjs`; the frontier is always every check the meter has.
+R0, R1, R2, R4 and R6 run on every `scripts/score`, in about 2 seconds, offline. R3 needs Chrome for Testing and takes about 15 seconds, so it runs only with `SCORE_E2E=1`. R5 is a person. The totals grow when a check or a promise is added to `scripts/score.mjs`; the frontier is always every check the meter has.
 
 ## Why each frontier can be reached
 
@@ -23,6 +24,7 @@ R0, R1, R2 and R4 run on every `scripts/score`, in about 2 seconds, offline. R3 
 - **R2 and R3.** `e2e.mjs` already walks the promises it names: a swept tab, the return, a background tab, a legacy page, a new visit, capitals, and overlapping writes. `SCORE_E2E=1 scripts/score` runs that script on Chrome for Testing, and it passes on Linux (158, under xvfb) and on macOS (159). Each missing promise is the same kind of check.
 - **R4.** The blocked page stores its colors as hex tokens. The light link and the remaining time use `--ink-soft` on `--paper`, and that pair is under 4.5:1. The other five pairs already clear it. The Save button and the hour fields are short because the body font is 13px and the padding is 7px and 5px. 4.5:1 is WCAG 2.2 AA for text this size. 44px is the tap-target rule on the UI ladder (WCAG 2.5.5).
 - **R5.** `npm run demo` already records the GIFs and the screenshots. A person looks at them.
+- **R6.** Safari 16.4 and Safari on iOS 16.4 have every API Workblock uses except `browsingData`, per `@mdn/browser-compat-data`. `background.js` skips the service-worker purge when `"browsingData" in chrome` is false, and `e2e.mjs` proves that path in Chrome for Testing by deleting `chrome.browsingData` and blocking again. Safari leaves `tab.url` empty without host access, so the manifest declares `optional_host_permissions` and, on Safari only, `options.js` asks for the origins `siteOrigins` builds from the blocked sites.
 
 ## How each rung is measured
 
@@ -32,6 +34,7 @@ R0, R1, R2 and R4 run on every `scripts/score`, in about 2 seconds, offline. R3 
 - **R3.** `SCORE_E2E=1 scripts/score` runs `npm run e2e`. On Linux with no `DISPLAY`, it runs under `xvfb-run`. The browser is `SCORE_CHROME`, or the newest Chrome for Testing under `~/.cache/workblock/browsers` (where `.agents/setup` puts it) or a Playwright cache. The meter gives each run a free CDP port through `WORKBLOCK_CDP_PORT`, so agents in different worktrees can run R3 at once. `npm run e2e` and `npm run demo` on their own use 9333. When the run fails, `first_fail` names the first flow it did not reach and the error. Without the flag the rung is `unmeasured`.
 - **R4.** Contrast is computed from the `:root` tokens in `blocked.html`, light and dark, for the ticket text, the link and the remaining time, and the note. The Save and hour heights are computed from the font, padding, and border in `options.html`. A check the meter cannot make is listed under `unmeasured` and is not in the total.
 - **R5.** Always `manual`.
+- **R6.** `scripts/score` reads `manifest.json` and every top-level `.js` file, then looks up each manifest key, permission, `chrome.<namespace>.<member>`, rule condition and resource type in `scripts/safari-compat.json`. An entry Safari lacks passes only when a script checks `"<namespace>" in chrome`. `safari-origins` matches the requested origins against the hosts `hostMatches` blocks, by the match-pattern rules. The README must say `Safari <version> or later` and `iOS and iPadOS <version> or later` with the newest `version_added` among those entries. A key the snapshot does not list goes under `unmeasured`. Running the extension in Safari needs a Mac and Xcode, so it is listed under `unmeasured` and the owner does it by hand. `node scripts/safari-compat.mjs <data.json>` refreshes the snapshot.
 
 A bold id in `docs/DEVIATIONS.md` leaves that check or flow out of the total. Only the owner adds an entry.
 
@@ -49,7 +52,8 @@ Read them to see what to prove. Do not copy another extension's code.
 
 - A window that wraps past midnight, a split day, or a start that is not a whole hour. The product refuses those. A wrapping window blocks nothing, and that refusal is an R1 check, not a feature to add.
 - Stopping a person who disables the extension or unticks today.
-- Safari, phones, and DNS blocking.
+- DNS blocking, and any phone browser other than Safari.
+- Testing inside Safari from this meter. R6 checks the code against MDN's data, and a person tries a build on a Mac and a phone.
 - The Chrome Web Store, `npm run ship`, and anything that deploys.
 - Shortening the one-minute alarm.
 - Lighthouse. The pages are extension documents, not a public site.

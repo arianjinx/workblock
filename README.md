@@ -1,8 +1,8 @@
 # Workblock
 
-A Brave and Chrome extension that blocks distracting sites during your working hours.
+A Brave, Chrome and Safari extension that blocks distracting sites during your working hours, on a computer, an iPhone or an iPad.
 
-**Status:** In use. It is not on the Chrome Web Store, so you load it from a clone. Public repository with one owner.
+**Status:** In use. It is not on the Chrome Web Store or the App Store, so you load it from a clone. Public repository with one owner.
 
 <picture>
 	<source media="(prefers-color-scheme: dark)" srcset="docs/demo-dark.gif" />
@@ -27,9 +27,35 @@ Then load the folder:
 
 The popup shows your sites, hours, and days. Its status line reads `Off the clock. Nothing blocked.` outside the hours, or `Blocking now, until 17:00` during them.
 
+### Safari on a Mac, iPhone, or iPad
+
+Safari loads an extension only from inside an app, so you build a small wrapper app once, on a Mac with Xcode 14.3 or later:
+
+```sh
+xcrun safari-web-extension-converter /path/to/workblock \
+	--project-location ~/workblock-safari --app-name Workblock \
+	--bundle-identifier com.yourname.workblock --swift --no-open
+```
+
+The project it writes builds a macOS app and an iOS app. It points at the files in your clone, so a `git pull` and a rebuild update it.
+
+On the Mac:
+
+1. Open `~/workblock-safari/Workblock/Workblock.xcodeproj`, pick the `Workblock (macOS)` scheme, and click **Run**.
+2. Without a signing team, turn on **Develop** > **Allow Unsigned Extensions** in Safari. The Develop menu appears once you tick **Show features for web developers** in **Settings** > **Advanced**.
+3. In Safari's **Settings** > **Extensions**, tick **Workblock**.
+
+On an iPhone or iPad:
+
+1. Pick the `Workblock (iOS)` scheme and your device, set a signing team under **Signing & Capabilities**, and click **Run**. A free Apple ID works, but its builds stop opening after 7 days.
+2. Open **Settings** > **Apps** > **Safari** > **Extensions** (**Settings** > **Safari** > **Extensions** on iOS 17 and earlier), and turn on **Workblock**.
+
+Then open the Workblock popup from Safari's toolbar or the address bar's extensions menu and click **Save**. Safari asks to let Workblock read your blocked sites. Allow it, or open tabs on those sites stay put and only new visits are blocked.
+
 ## Requirements
 
-- Brave or Chrome on a computer. There is no Safari or phone version.
+- Brave or Chrome on a computer, Safari 16.4 or later on a Mac, or Safari on iOS and iPadOS 16.4 or later.
+- For Safari, a Mac with Xcode 14.3 or later, once, to build the wrapper app.
 - Nothing else to install. The extension has no dependencies and no build step.
 
 ## Usage
@@ -48,7 +74,9 @@ To update, run `git pull` in the folder and click reload on the extension's card
 | `alarms` | Wake the service worker once a minute to check the clock. |
 | `storage` | Keep your sites, hours, and days in `chrome.storage.sync`. |
 | `tabs` | Find tabs on a blocked site and move them to the blocked page. |
-| `browsingData` | Remove service workers that would serve a blocked site from cache. |
+| `browsingData` | Remove service workers that would serve a blocked site from cache. Safari has no such API, so Workblock skips it there. |
+
+The manifest also lists every site under `optional_host_permissions`. Chrome and Brave never ask for it. Safari hides a tab's address without it, so on Safari, **Save** asks for access to your blocked sites and nothing else.
 
 ## How it works
 
@@ -61,6 +89,8 @@ The popup saves settings to `chrome.storage.sync`. The service worker reads them
 - The alarm can lag a block by up to a minute.
 - This browser profile only.
 - During a block, service workers and cache storage for blocked sites are cleared. Cookies stay.
+- On Safari, service workers and cache storage are not cleared, the settings stay on one device, and the badge keeps Safari's own color.
+- On Safari, an open tab moves to the blocked page only on a site you let Workblock read. Without that access, a new visit shows Safari's own error page instead.
 
 ## Configuration
 
@@ -100,6 +130,8 @@ npm run e2e -- "/path/to/Google Chrome for Testing"
 npm run demo
 ```
 
+The Safari rung reads `scripts/safari-compat.json`, a slice of MDN's browser compatibility data. To refresh it, download `data.json` from the `@mdn/browser-compat-data` package and run `node scripts/safari-compat.mjs /path/to/data.json`. Nothing tests Workblock inside Safari itself, so try a Safari change on a Mac and a phone by hand.
+
 With no path, `npm run e2e` starts Brave from its macOS install path. `npm run demo` rewrites the GIFs and screenshots in `docs/`, and needs `ffmpeg` and ImageMagick 7.
 
 | Variable | Default | What it does |
@@ -124,7 +156,7 @@ The repository is flat.
 | `blocked.html`, `blocked.js` | The blocked page and the return to the original link. |
 | `e2e.mjs`, `cdp.mjs` | The browser test, driven over the Chrome DevTools Protocol. |
 | `demo.mjs` | Records `docs/demo-light.gif`, `docs/demo-dark.gif`, and `docs/screenshots/`. |
-| `scripts/` | The gate (`verify.sh`, `rules.mjs`) and the meter (`score`, `score.mjs`). |
+| `scripts/` | The gate (`verify.sh`, `rules.mjs`), the meter (`score`, `score.mjs`), and the Safari support table (`safari-compat.json`, written by `safari-compat.mjs`). |
 | `prune.mjs`, `ship.mjs` | The merge and clean-up helpers. |
 
 ## Contributing

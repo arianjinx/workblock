@@ -1,4 +1,4 @@
-import { DEFAULTS, isValidWindow, isWorkHours, parseSites } from "./schedule.js";
+import { DEFAULTS, isValidWindow, isWorkHours, parseSites, siteOrigins } from "./schedule.js";
 
 const $ = (id) => document.getElementById(id);
 const DAY_NAMES = ["S", "M", "T", "W", "T", "F", "S"];
@@ -28,6 +28,20 @@ function showStatus(c) {
 }
 showStatus(cfg);
 
+const needsSiteAccess = chrome.runtime.getURL("").startsWith("safari-web-extension:");
+
+async function showAccess(sites) {
+	const granted = () => chrome.permissions.contains({ origins: siteOrigins(sites) }).catch(() => false);
+	const missing = needsSiteAccess && sites.length > 0 && !(await granted());
+	$("access").hidden = !missing;
+}
+showAccess(cfg.sites);
+
+function askForSiteAccess(sites) {
+	if (!needsSiteAccess || !sites.length) return Promise.resolve();
+	return chrome.permissions.request({ origins: siteOrigins(sites) }).catch(() => false);
+}
+
 $("save").addEventListener("click", async () => {
 	const next = {
 		sites: parseSites($("sites").value),
@@ -41,6 +55,7 @@ $("save").addEventListener("click", async () => {
 		return;
 	}
 	$("endHour").setCustomValidity("");
+	askForSiteAccess(next.sites).then(() => showAccess(next.sites));
 	await chrome.storage.sync.set(next);
 	$("sites").value = next.sites.join("\n");
 	showStatus(next);

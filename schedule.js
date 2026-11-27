@@ -46,6 +46,9 @@ export function hostMatches(url, sites) {
 	});
 }
 
+export const siteOrigins = (sites) =>
+	sites.map((site) => site.toLowerCase()).flatMap((site) => [`*://${site}/*`, `*://*.${site}/*`]);
+
 export function parseSites(text) {
 	return text
 		.split("\n")

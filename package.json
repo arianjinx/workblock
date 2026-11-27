@@ -1,7 +1,7 @@
 {
 	"name": "workblock",
 	"version": "1.0.0",
-	"description": "Brave/Chrome extension that blocks distracting sites during your working hours.",
+	"description": "Brave, Chrome and Safari extension that blocks distracting sites during your working hours.",
 	"license": "MIT",
 	"private": true,
 	"type": "module",
