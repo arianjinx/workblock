@@ -5,18 +5,28 @@ The current score for each rung, then the evidence for every step, newest first.
 | Rung | Name | Score | Frontier | Commit |
 |---|---|---|---|---|
 | R0 | Gate | yes | yes | b6680e0 |
-| R1 | Schedule | 63/67 | 67/67 | b6680e0 |
+| R1 | Schedule | 65/69 | 69/69 | aa8383c |
 | R2 | Flows | 11/23 | 23/23 | b6680e0 |
 | R3 | Device | 11/23, e2e passed | 23/23, e2e passes | b6680e0 |
 | R4 | UI rules | 5/8 | 8/8 | b6680e0 |
 | R5 | Taste | manual | the owner's yes | — |
-| R6 | Safari | 48/48 | 48/48 | afe9404 |
+| R6 | Safari | 56/56 | 56/56 | aa8383c |
 
 ## Speed
 
 There is no speed rung. The README's one-minute alarm is a limit, not a target. If a speed rung is added later, a number counts only when the baseline and the candidate run interleaved, at least 6 pairs, on an idle machine, and the whole paired 95% interval is a gain.
 
 ## Evidence
+
+### 2026-11-27 Safari redirects instead of bouncing tabs
+
+`afe9404` only slowed the loop. Safari 27.2 froze again at 87% CPU for 103 seconds in `WebExtensionContext::tabsUpdate`. Safari reports a tab's earlier address while it moves (WebKit commit `f062ddd698`) and has no `pendingUrl`, so a bounce from `tabs.onUpdated` cannot tell a moving tab from a tab still on the site.
+
+- Fix: Safari gets a redirect rule per site with access (`regexFilter` and `regexSubstitution` to `blocked.html#\0`, with `declarativeNetRequestWithHostAccess`), and a block rule per site without. It never listens to `tabs.onUpdated`. Chrome and Brave keep block rules and the bounce, now in `chrome-blocking.js`.
+- New R6 checks: `safari-redirect-hosts`, `-return`, `-syntax` and `-needs-access`, against `hostMatches` and WebKit's `\0` to `\9` substitution. R1 gained two permission-table checks for `declarativeNetRequestWithHostAccess`, and both pass.
+- Command: `SCORE_E2E=1 scripts/score --all`. Machine: `darwin arm64`. Commit: `aa8383c`, clean tree. Chrome for Testing 159.0.8154.6.
+- Result: R0 yes, R1 65/69, R2 11/23, R3 11/23 with e2e passing, R4 5/8, R5 manual, R6 56/56. The four R1 `parse-` failures are the same as before.
+- Inside Safari: the owner saw a block work on a build of this tree. Not yet checked in detail: an open tab moving, the return when a block ends, access granted for one day running out, and iOS.
 
 ### 2026-11-27 Safari froze on a block
 
