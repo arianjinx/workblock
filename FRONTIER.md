@@ -10,12 +10,24 @@ The current score for each rung, then the evidence for every step, newest first.
 | R3 | Device | 11/23, e2e passed | 23/23, e2e passes | b6680e0 |
 | R4 | UI rules | 5/8 | 8/8 | b6680e0 |
 | R5 | Taste | manual | the owner's yes | — |
+| R6 | Safari | 46/46 | 46/46 | c45228f |
 
 ## Speed
 
 There is no speed rung. The README's one-minute alarm is a limit, not a target. If a speed rung is added later, a number counts only when the baseline and the candidate run interleaved, at least 6 pairs, on an idle machine, and the whole paired 95% interval is a gain.
 
 ## Evidence
+
+### 2026-11-27 Safari on macOS, iOS and iPadOS
+
+The owner moved Safari and phones into scope. R6 checks the code against `@mdn/browser-compat-data` 8.1.11 in `scripts/safari-compat.json`.
+
+- Command: `SCORE_E2E=1 scripts/score --all`. Machine: `linux x64`. Commit: `c45228f`, clean tree. Chrome for Testing 158.0.8127.88 under `xvfb-run`.
+- Result: R0 yes, R1 63/67, R2 11/23, R3 11/23 with e2e passing, R4 5/8, R5 manual, R6 46/46. R1 to R4 match the 2026-11-25 numbers.
+- R6 before, the same meter on `8ae6659`: 36/42. It failed on the unguarded `browsingData` permission and `chrome.browsingData.remove`, the missing host access Safari needs for `tab.url`, the missing `siteOrigins`, and the two README version sentences.
+- The minimum is Safari 16.4 and iOS 16.4, from `manifest.background.type` and `RuleCondition.requestDomains`.
+- `e2e.mjs` deletes `chrome.browsingData` and blocks again. Before the guard it timed out waiting for the badge. After, the badge reads `ON`, the tab is swept, and the worker throws nothing.
+- Not measured: Workblock running inside Safari. That needs a Mac with Xcode, so the owner tries it by hand.
 
 ### 2026-11-25 re-baseline after the frontier review
 
