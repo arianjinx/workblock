@@ -102,6 +102,37 @@ try {
 	assert.deepEqual(ext.errors, [], "a browser without browsingData, like Safari, blocks without throwing");
 	console.log("ok - a browser without browsingData, like Safari, still blocks, sweeps and shows the badge");
 
+	const staleUrl = "https://example.com/stale";
+	const blockedStale = blockedPageUrl(extBase + "blocked.html", staleUrl);
+	await setCfg({ days: [] });
+	await waitFor("rules cleared", async () => (await ruleCount()) === 0);
+	const stale = await openTab(staleUrl);
+	await landsOn(stale, staleUrl, "a tab to load before Safari reports its old address");
+	await ext.evaluate(`(() => {
+		const update = chrome.tabs.update.bind(chrome.tabs);
+		globalThis.sendsToBlockedPage = 0;
+		chrome.tabs.update = (id, props) => {
+			if (id === ${stale} && props.url?.startsWith(${JSON.stringify(extBase)})) sendsToBlockedPage++;
+			return update(id, props);
+		};
+		return true;
+	})()`);
+	const reportOldAddress = () =>
+		ext.evaluate(`chrome.tabs.get(${stale}).then((tab) => {
+			for (let i = 0; i < 3; i++) chrome.tabs.onUpdated.dispatch(${stale}, { url: ${JSON.stringify(staleUrl)} }, { ...tab, url: ${JSON.stringify(staleUrl)} });
+			return true;
+		})`);
+	await setCfg({ ...ALWAYS });
+	await reportOldAddress();
+	await landsOn(stale, blockedStale, "the swept tab to reach the blocked page", 5000);
+	await reportOldAddress();
+	await sleep(3000);
+	await reportOldAddress();
+	await sleep(1000);
+	assert.equal(await tabUrl(stale), blockedStale, "the tab stays on the blocked page");
+	assert.equal(await ext.evaluate("sendsToBlockedPage"), 1, "a tab Safari still reports at its old address is not sent to the blocked page again, which loops Safari");
+	console.log("ok - a tab Safari still reports at its old address is sent to the blocked page once, so Safari does not loop");
+
 	console.log("ok - e2e passed");
 } finally {
 	await close();

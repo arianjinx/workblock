@@ -2,7 +2,16 @@ import { DEFAULTS, blockedPageUrl, buildRules, hostMatches, isWorkHours } from "
 
 const BLOCKED_PAGE = chrome.runtime.getURL("blocked.html");
 
-const sendToBlockedPage = (tabId, url) => chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
+const RESEND_AFTER_MS = 2000;
+const lastSentAt = new Map();
+
+function sendToBlockedPage(tabId, url) {
+	const now = Date.now();
+	if (now - (lastSentAt.get(tabId) ?? -Infinity) < RESEND_AFTER_MS) return;
+	lastSentAt.set(tabId, now);
+	return chrome.tabs.update(tabId, { url: blockedPageUrl(BLOCKED_PAGE, url) });
+}
+chrome.tabs.onRemoved.addListener((tabId) => lastSentAt.delete(tabId));
 
 const canClearSiteData = () => "browsingData" in chrome;
 
@@ -58,9 +67,12 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
 	return true;
 });
 
-async function bounceBlockedVisit(tabId, { url }) {
-	if (!url) return;
+async function bounceBlockedVisit(tabId, { url: reportedUrl }) {
+	if (!reportedUrl) return;
 	const cfg = await chrome.storage.sync.get(DEFAULTS);
-	if (isWorkHours(cfg, new Date()) && hostMatches(url, cfg.sites)) sendToBlockedPage(tabId, url);
+	if (!isWorkHours(cfg, new Date())) return;
+	const tab = await chrome.tabs.get(tabId).catch(() => null);
+	const liveUrl = tab?.pendingUrl ?? tab?.url;
+	if (liveUrl && hostMatches(liveUrl, cfg.sites)) sendToBlockedPage(tabId, liveUrl);
 }
 chrome.tabs.onUpdated.addListener(bounceBlockedVisit);
