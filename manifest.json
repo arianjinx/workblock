@@ -3,8 +3,9 @@
   "name": "Workblock",
   "version": "1.0.0",
   "description": "Blocks distracting sites during your working hours.",
-  "permissions": ["declarativeNetRequest", "storage", "alarms", "tabs", "browsingData"],
+  "permissions": ["declarativeNetRequest", "declarativeNetRequestWithHostAccess", "storage", "alarms", "tabs", "browsingData"],
   "optional_host_permissions": ["*://*/*"],
+  "web_accessible_resources": [{ "resources": ["blocked.html"], "matches": ["*://*/*"] }],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_popup": "options.html", "default_title": "Workblock" },
   "options_ui": { "page": "options.html", "open_in_tab": true }

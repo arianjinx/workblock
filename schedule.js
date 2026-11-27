@@ -46,6 +46,22 @@ export function hostMatches(url, sites) {
 	});
 }
 
+const escapeForRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export const siteUrlPattern = (site) => `^https?://([^:/]+\\.)?${escapeForRegex(site.toLowerCase())}[:/].*`;
+
+export function buildRedirectRules(sites, page, redirected) {
+	return buildRules(sites).map((rule, i) =>
+		redirected.has(sites[i])
+			? {
+					...rule,
+					action: { type: "redirect", redirect: { regexSubstitution: `${page}#\\0` } },
+					condition: { regexFilter: siteUrlPattern(sites[i]), resourceTypes: ["main_frame"] },
+				}
+			: rule,
+	);
+}
+
 export const siteOrigins = (sites) =>
 	sites.map((site) => site.toLowerCase()).flatMap((site) => [`*://${site}/*`, `*://*.${site}/*`]);
 
@@ -64,3 +80,5 @@ export function webReturnUrl(search) {
 	const url = new URLSearchParams(search).get("url");
 	return /^https?:\/\//.test(url ?? "") ? url : null;
 }
+
+export const fragmentReturnUrl = (hash) => webReturnUrl(new URLSearchParams({ url: hash.slice(1) }).toString());

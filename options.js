@@ -1,4 +1,5 @@
 import { DEFAULTS, isValidWindow, isWorkHours, parseSites, siteOrigins } from "./schedule.js";
+import { onSafari } from "./tabs.js";
 
 const $ = (id) => document.getElementById(id);
 const DAY_NAMES = ["S", "M", "T", "W", "T", "F", "S"];
@@ -28,17 +29,15 @@ function showStatus(c) {
 }
 showStatus(cfg);
 
-const needsSiteAccess = chrome.runtime.getURL("").startsWith("safari-web-extension:");
-
 async function showAccess(sites) {
 	const granted = () => chrome.permissions.contains({ origins: siteOrigins(sites) }).catch(() => false);
-	const missing = needsSiteAccess && sites.length > 0 && !(await granted());
+	const missing = onSafari && sites.length > 0 && !(await granted());
 	$("access").hidden = !missing;
 }
 showAccess(cfg.sites);
 
 function askForSiteAccess(sites) {
-	if (!needsSiteAccess || !sites.length) return Promise.resolve();
+	if (!onSafari || !sites.length) return Promise.resolve();
 	return chrome.permissions.request({ origins: siteOrigins(sites) }).catch(() => false);
 }
 

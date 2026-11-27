@@ -37,20 +37,20 @@ xcrun safari-web-extension-converter /path/to/workblock \
 	--bundle-identifier com.yourname.workblock --swift --no-open
 ```
 
-The project it writes builds a macOS app and an iOS app. It points at the files in your clone, so a `git pull` and a rebuild update it.
+The project it writes builds a macOS app and an iOS app. It points at the files in your clone, so after a `git pull` a rebuild picks up changed files. It lists each file by name, so when a pull adds a file, run the command again with `--force` before you rebuild.
 
 On the Mac:
 
 1. Open `~/workblock-safari/Workblock/Workblock.xcodeproj`, pick the `Workblock (macOS)` scheme, and click **Run**.
-2. Without a signing team, turn on **Develop** > **Allow Unsigned Extensions** in Safari. The Develop menu appears once you tick **Show features for web developers** in **Settings** > **Advanced**.
+2. Without a signing team, turn on **Develop** > **Allow Unsigned Extensions** in Safari. The Develop menu appears once you tick **Show features for web developers** in **Settings** > **Advanced**. Safari turns that setting off each time it quits, so sign with a team to keep Workblock on.
 3. In Safari's **Settings** > **Extensions**, tick **Workblock**.
 
 On an iPhone or iPad:
 
-1. Pick the `Workblock (iOS)` scheme and your device, set a signing team under **Signing & Capabilities**, and click **Run**. A free Apple ID works, but its builds stop opening after 7 days.
+1. Pick the `Workblock (iOS)` scheme and your device, set a signing team under **Signing & Capabilities**, and click **Run**. Apple's guide asks for an Apple Developer Program membership to run an extension on a device.
 2. Open **Settings** > **Apps** > **Safari** > **Extensions** (**Settings** > **Safari** > **Extensions** on iOS 17 and earlier), and turn on **Workblock**.
 
-Then open the Workblock popup from Safari's toolbar or the address bar's extensions menu and click **Save**. Safari asks to let Workblock read your blocked sites. Allow it, or open tabs on those sites stay put and only new visits are blocked.
+Then open the Workblock popup from Safari's toolbar or the address bar's extensions menu and click **Save**. Safari asks to let Workblock read your blocked sites. Pick **Always Allow**. A visit to a site you allowed lands on the blocked page, and open tabs on it move there. A site you did not allow is still blocked, but Safari shows a blank page and open tabs on it stay put.
 
 ## Requirements
 
@@ -62,7 +62,7 @@ Then open the Workblock popup from Safari's toolbar or the address bar's extensi
 
 Click the toolbar icon, change the settings in [Configuration](#configuration), and click **Save**. The block starts or stops at once if the new hours say so.
 
-During a block, an open tab on a blocked site and a new visit both land on the blocked page. The page names the site and the time the block ends. The tab keeps its link as `blocked.html?url=<the original URL>`. The visible tab goes back when the block ends. A background tab goes back when you switch to it.
+During a block, an open tab on a blocked site and a new visit both land on the blocked page. The page names the site and the time the block ends. The tab keeps its link as `blocked.html?url=<the original URL>`, or as `blocked.html#<the original URL>` after a Safari redirect. The visible tab goes back when the block ends. A background tab goes back when you switch to it.
 
 To update, run `git pull` in the folder and click reload on the extension's card. Your settings stay.
 
@@ -71,16 +71,22 @@ To update, run `git pull` in the folder and click reload on the extension's card
 | Permission | Why Workblock needs it |
 | --- | --- |
 | `declarativeNetRequest` | Install and remove the block rules. |
+| `declarativeNetRequestWithHostAccess` | Let Safari redirect a visit to a blocked site to the blocked page. Chrome and Brave block instead and never use it. |
 | `alarms` | Wake the service worker once a minute to check the clock. |
 | `storage` | Keep your sites, hours, and days in `chrome.storage.sync`. |
 | `tabs` | Find tabs on a blocked site and move them to the blocked page. |
 | `browsingData` | Remove service workers that would serve a blocked site from cache. Safari has no such API, so Workblock skips it there. |
 
-The manifest also lists every site under `optional_host_permissions`. Chrome and Brave never ask for it. Safari hides a tab's address without it, so on Safari, **Save** asks for access to your blocked sites and nothing else.
+The manifest also lists every site under `optional_host_permissions`. Chrome and Brave never ask for it. Safari hides a tab's address without it and redirects only with it, so on Safari, **Save** asks for access to your blocked sites and nothing else. `web_accessible_resources` lists `blocked.html`, so a redirected visit may open it.
 
 ## How it works
 
 The popup saves settings to `chrome.storage.sync`. The service worker reads them every minute and on every change, then turns the block rules on or off and moves open tabs to the blocked page.
+
+The block itself differs by browser:
+
+- Chrome and Brave get one block rule per site. When a tab starts loading a blocked site, the service worker moves it to the blocked page.
+- Safari gets one redirect rule per site you allowed, which sends the visit straight to the blocked page, and one block rule per site you did not. The service worker never watches tab loads on Safari. Safari reports a tab's earlier address while the tab is moving, and moving it again on that report kept Safari busy until it stopped responding.
 
 ## Known limits
 
@@ -90,7 +96,8 @@ The popup saves settings to `chrome.storage.sync`. The service worker reads them
 - This browser profile only.
 - During a block, service workers and cache storage for blocked sites are cleared. Cookies stay.
 - On Safari, service workers and cache storage are not cleared, the settings stay on one device, and the badge keeps Safari's own color.
-- On Safari, an open tab moves to the blocked page only on a site you let Workblock read. Without that access, a new visit shows Safari's own error page instead.
+- On Safari, an open tab moves to the blocked page only on a site you let Workblock read. Without that access, a new visit shows a blank page instead. Access you allowed for one day ends, and then the site gets the blank page until you allow it again.
+- On an iPhone or iPad, Workblock blocks only in Safari, not in other browsers or in apps that show web pages. In Private Browsing it runs only if you allow it there. iOS can stop the service worker, so a block may start or end late.
 
 ## Configuration
 
@@ -151,7 +158,10 @@ The repository is flat.
 | --- | --- |
 | `manifest.json` | The extension's manifest. |
 | `schedule.js` | The defaults, the hour check, the rules, and the site parser. It uses no browser APIs. |
-| `background.js` | The service worker: rules, tabs, badge, and cache clean-up. |
+| `background.js` | The service worker: the clock, the rules, and the badge, shared by every browser. |
+| `chrome-blocking.js` | Chrome and Brave: block rules, moving a tab that starts loading a blocked site, and cache clean-up. |
+| `safari-blocking.js` | Safari: redirect rules for the sites you allowed and block rules for the rest. |
+| `tabs.js` | Moving open tabs to the blocked page, shared by every browser. |
 | `options.html`, `options.js` | The popup and the options page. |
 | `blocked.html`, `blocked.js` | The blocked page and the return to the original link. |
 | `e2e.mjs`, `cdp.mjs` | The browser test, driven over the Chrome DevTools Protocol. |

@@ -1,7 +1,7 @@
-import { DEFAULTS, hostMatches, isWorkHours, webReturnUrl } from "./schedule.js";
+import { DEFAULTS, fragmentReturnUrl, hostMatches, isWorkHours, webReturnUrl } from "./schedule.js";
 
 const $ = (id) => document.getElementById(id);
-const url = webReturnUrl(location.search);
+const url = webReturnUrl(location.search) ?? fragmentReturnUrl(location.hash);
 
 if (url) {
 	document.title = url;

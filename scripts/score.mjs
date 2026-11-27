@@ -635,14 +635,17 @@ function safariChecks() {
 	for (const file of scripts) for (const match of text[file].matchAll(/chrome\.(\w+)\.(\w+)/g)) apis.add(`${match[1]}.${match[2]}`);
 	for (const api of [...apis].sort()) need(`safari-api-${api}`, `api.${api}`, `chrome.${api}`, api.split(".")[0]);
 
-	const rule = buildRules(["x.com"])[0];
-	for (const key of Object.keys(rule.condition)) {
+	const page = "safari-web-extension://id/blocked.html";
+	const redirectRules = scheduleModule.buildRedirectRules?.(["x.com"], page, new Set(["x.com"])) ?? [];
+	const shapes = [buildRules(["x.com"])[0], ...redirectRules];
+	for (const key of new Set(shapes.flatMap((rule) => Object.keys(rule.condition)))) {
 		const entryKey = `api.declarativeNetRequest.RuleCondition.${key}`;
 		if (entries[entryKey]) need(`safari-rule-${key}`, entryKey, `the rule condition ${key}`);
 	}
-	for (const type of rule.condition.resourceTypes ?? []) {
+	for (const type of new Set(shapes.flatMap((rule) => rule.condition.resourceTypes ?? []))) {
 		need(`safari-resource-${type}`, `api.declarativeNetRequest.ResourceType.${type}`, `the resource type ${type}`);
 	}
+	if (shapes.some((rule) => rule.action.type === "redirect")) need("safari-action-redirect", "api.declarativeNetRequest.Redirect", "the redirect action");
 
 	const readsTabUrls = scripts.some((file) => /chrome\.tabs\./.test(text[file]) && /\.url\b/.test(text[file]));
 	if (readsTabUrls && entries["api.tabs.Tab.url"]?.host_access) {
@@ -680,6 +683,8 @@ function safariChecks() {
 				: "",
 	});
 
+	checks.push(...redirectChecks(sites, urls, page));
+
 	const readme = readFileSync(join(root, "README.md"), "utf8");
 	for (const [id, phrase] of [
 		["safari-readme-mac", `Safari ${mac} or later`],
@@ -689,6 +694,41 @@ function safariChecks() {
 		checks.push({ id, pass, detail: pass ? "" : `${id}: README does not say "${phrase}", the oldest version every API Workblock uses needs` });
 	}
 	return { checks, unmeasured, min_safari: mac, min_ios: ios, source };
+}
+
+const CONTENT_BLOCKER_UNSUPPORTED = /[|{}]|\\[dDwWsSbB1-9]|\(\?|[*+?]\?/;
+
+function webkitSubstitute(rule, url) {
+	const match = url.match(new RegExp(rule.condition.regexFilter));
+	if (!match) return null;
+	let substitution = rule.action.redirect.regexSubstitution;
+	for (let i = 0; i < Math.min(10, match.length); i++) substitution = substitution.replaceAll(`\\${i}`, String(match[i]));
+	return substitution;
+}
+
+function redirectChecks(sites, urls, page) {
+	const build = scheduleModule.buildRedirectRules;
+	const back = scheduleModule.fragmentReturnUrl;
+	if (!build || !back) {
+		return [{ id: "safari-redirect", pass: false, detail: "safari-redirect: schedule.js exports no buildRedirectRules and fragmentReturnUrl, so Safari visits cannot land on the blocked page" }];
+	}
+	const rules = build(sites, page, new Set(sites)).filter((rule) => rule.action.type === "redirect");
+	const redirected = (url) => rules.find((rule) => new RegExp(rule.condition.regexFilter).test(url));
+	const wrongHosts = urls.filter((url) => hostMatches(url, sites) !== Boolean(redirected(url)));
+	const lost = urls.filter((url) => {
+		const rule = redirected(url);
+		if (!rule) return false;
+		const target = webkitSubstitute(rule, url);
+		return !target?.startsWith(`${page}#`) || back(new URL(target).hash) !== url;
+	});
+	const unsupported = rules.map((rule) => rule.condition.regexFilter).filter((pattern) => CONTENT_BLOCKER_UNSUPPORTED.test(pattern));
+	const none = build(sites, page, new Set()).filter((rule) => rule.action.type !== "block");
+	return [
+		{ id: "safari-redirect-hosts", pass: rules.length === sites.length && wrongHosts.length === 0, detail: wrongHosts.length || rules.length !== sites.length ? `safari-redirect-hosts: the Safari redirect rules disagree with what Workblock blocks on ${wrongHosts.join(", ") || "the site count"}` : "" },
+		{ id: "safari-redirect-return", pass: lost.length === 0, detail: lost.length ? `safari-redirect-return: the blocked page cannot send ${lost.join(", ")} back to where it was` : "" },
+		{ id: "safari-redirect-syntax", pass: unsupported.length === 0, detail: unsupported.length ? `safari-redirect-syntax: Safari's content blockers reject ${unsupported.join(", ")} (no |, {}, \\d, lookaround or lazy quantifiers)` : "" },
+		{ id: "safari-redirect-needs-access", pass: none.length === 0, detail: none.length ? "safari-redirect-needs-access: a site without access gets a redirect rule, which Safari skips, so the site would load" : "" },
+	];
 }
 
 function gate() {
