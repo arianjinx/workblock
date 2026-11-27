@@ -10,13 +10,24 @@ The current score for each rung, then the evidence for every step, newest first.
 | R3 | Device | 11/23, e2e passed | 23/23, e2e passes | b6680e0 |
 | R4 | UI rules | 5/8 | 8/8 | b6680e0 |
 | R5 | Taste | manual | the owner's yes | — |
-| R6 | Safari | 46/46 | 46/46 | c45228f |
+| R6 | Safari | 48/48 | 48/48 | afe9404 |
 
 ## Speed
 
 There is no speed rung. The README's one-minute alarm is a limit, not a target. If a speed rung is added later, a number counts only when the baseline and the candidate run interleaved, at least 6 pairs, on an idle machine, and the whole paired 95% interval is a gain.
 
 ## Evidence
+
+### 2026-11-27 Safari froze on a block
+
+The first run inside Safari, Safari 27.2 on macOS 27.2.1, froze the browser after Save. A `cpu_resource` report put Safari at full CPU for about 160 seconds in `WebExtensionContext::tabsUpdate` and `WebExtensionTab::loadURL`.
+
+- Cause: Safari's `tabs.onUpdated` reports a tab's earlier address when the address changes again within its 25 ms delay, and re-fires it for every matching tab after a site-access grant. The bounce trusted that address, so each resend restarted the load and caused the next report.
+- Fix in `background.js`: read the tab's live address, and send one tab to the blocked page at most once every 2 seconds.
+- Proof in `e2e.mjs`: it dispatches Safari's stale event during and after a sweep and counts sends for that tab. Before: 10. With only the live address: 4. With only the 2 second limit: 2. With both: 1.
+- Command: `SCORE_E2E=1 scripts/score --no-gate`, after `scripts/verify.sh` passed. Machine: `darwin arm64`. Commit: `afe9404`, clean tree. Chrome for Testing 159.0.8154.6.
+- Result: R1 63/67, R2 11/23, R3 11/23 with e2e passing, R4 5/8, R6 48/48. R6 gained two checks for `tabs.get` and `tabs.onRemoved`, both in Safari 14 and Safari on iOS 15. Nothing went down.
+- Not measured yet: the fixed build inside Safari.
 
 ### 2026-11-27 Safari on macOS, iOS and iPadOS
 
